@@ -1,0 +1,40 @@
+import type { Article } from '../types';
+
+export const mediumArticles: Article[] = [
+  {
+    id: 101,
+    title: 'My Husband is a Stay-at-Home-Dad and I am Not Jealous of Him',
+    author: 'Farhan Kabir',
+    date: 'Jun 10, 2024',
+    excerpt: 'The societal narrative often paints a picture of professional jealousy and resentment in couples where the woman is the primary breadwinner. My story is different.',
+    imageUrl: 'https://picsum.photos/seed/husband/800/600',
+    featured: true,
+    content: '',
+    tags: ['Family', 'Parenting', 'Work'],
+    externalUrl: 'https://medium.com/the-ink-home/my-husband-is-a-stay-at-home-dad-and-i-am-not-jealous-of-him-15321302b115',
+  },
+  {
+    id: 102,
+    title: 'How I Navigate My Life As A Highly Sensitive Person',
+    author: 'Farhan Kabir',
+    date: 'May 28, 2024',
+    excerpt: 'Being a Highly Sensitive Person (HSP) is not a disorder. It’s a trait. It means you process sensory data more deeply than others.',
+    imageUrl: 'https://picsum.photos/seed/sensitive/800/600',
+    featured: true,
+    content: '',
+    tags: ['Mindfulness', 'Self', 'Psychology'],
+    externalUrl: 'https://medium.com/the-ink-home/how-i-navigate-my-life-as-a-highly-sensitive-person-b3a262e086a2',
+  },
+  {
+    id: 103,
+    title: 'The Day I Let My Daughter Crash My Zoom Call',
+    author: 'Farhan Kabir',
+    date: 'May 17, 2024',
+    excerpt: 'The boundaries between work and home have blurred into a messy, beautiful, and often chaotic watercolor painting. My daughter just added a new splash of color.',
+    imageUrl: 'https://picsum.photos/seed/zoomcall/800/600',
+    featured: true,
+    content: '',
+    tags: ['Parenting', 'Work', 'Life'],
+    externalUrl: 'https://medium.com/the-ink-home/the-day-i-let-my-daughter-crash-my-zoom-call-1e09a393c2c1',
+  },
+];

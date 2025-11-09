@@ -1,0 +1,25 @@
+/* Minimal global styles required by the app - created to satisfy import in index.tsx */
+:root{
+  --bg: #ffffff;
+  --text: #0f1720;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body,#root{height:100%}
+body{
+  margin:0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background:var(--bg);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* Basic link and image defaults */
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+
+/* Utility container used by pages */
+.container{width:100%;max-width:1200px;margin:0 auto;padding:0 1rem}
+
+/* Add any additional global styles below */
