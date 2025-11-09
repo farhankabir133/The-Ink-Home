@@ -2,7 +2,7 @@ import React from 'react';
 
 const editors = [
     { name: 'Farhan Kabir', role: 'Founder & Editor-in-Chief', imageUrl: 'https://images.pexels.com/photos/34067041/pexels-photo-34067041.png' },
-    { name: 'Dua Batool', role: 'Lead Editor', imageUrl: 'https://images.pexels.com/photos/27603289/pexels-photo-27603289.jpeg' }
+    { name: 'Dua Batool', role: 'Lead Editor', imageUrl: 'https://images.pexels.com/photos/34666956/pexels-photo-34666956.png' }
 ];
 
 const AboutPage: React.FC = () => {
