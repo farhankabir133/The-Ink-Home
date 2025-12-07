@@ -82,6 +82,7 @@ Prerequisites
 
 Install and run
 
+```bash
 # install deps
 npm install
 
@@ -93,6 +94,7 @@ npm run build
 
 # preview the production build locally
 npm run preview
+```
 
 Notes
 

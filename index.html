@@ -16,19 +16,20 @@
     <!-- Tailwind CSS with Typography Plugin -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    <!-- NOTE: The site uses the 'Marryweather' font as the single text face.
+         Host the font files (WOFF2/WOFF) in /fonts or replace the URL below
+         with the Gumroad-hosted URL if you have a license and a link. -->
 
     <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
+            // Set both serif and sans stacks to use Marryweather so all text
+            // across the site renders with the same font when available.
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              serif: ['Playfair Display', 'serif'],
+              sans: ['Marryweather', 'serif'],
+              serif: ['Marryweather', 'serif'],
             },
             colors: {
               'ink-dark': '#1a1a1a',

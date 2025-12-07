@@ -2,16 +2,64 @@ import React, { useState } from 'react';
 
 type FormStatus = 'idle' | 'submitting' | 'success';
 
+const CONTACT_EMAIL = 'farhankabir236@gmail.com';
+
 const ContactPage: React.FC = () => {
     const [status, setStatus] = useState<FormStatus>('idle');
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Use FormSubmit's AJAX endpoint. No backend required. Note: the first
+    // submission may require verifying the email (formsubmit.co sends a one-time
+    // confirmation link) — after that messages will be forwarded to the inbox.
+    const endpoint = `https://formsubmit.co/ajax/${CONTACT_EMAIL}`;
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setError(null);
+        if (!name.trim() || !email.trim() || !message.trim()) {
+            setError('Please fill out all fields.');
+            return;
+        }
         setStatus('submitting');
-        // Simulate network request
-        setTimeout(() => {
+
+        try {
+            const body = {
+                name,
+                email,
+                message,
+                _subject: `Website contact form — ${name}`,
+                // Honeypot (spam) field — keep empty
+                _honey: '',
+                // Reply-To header for convenience
+                _replyto: email,
+            } as Record<string, string>;
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error((data && data.message) || 'Failed to send message');
+            }
+
             setStatus('success');
-        }, 1500);
+            setName('');
+            setEmail('');
+            setMessage('');
+        } catch (err: any) {
+            console.error('Contact form error:', err);
+            setError(err?.message || 'An unexpected error occurred. Please try again later.');
+            setStatus('idle');
+        }
     };
 
     return (
@@ -40,21 +88,55 @@ const ContactPage: React.FC = () => {
                     ) : (
                         <>
                             <p className="text-center mb-6 text-slate-600 dark:text-slate-300">
-                                For submissions or feedback, please use the form below or email us directly at <a href="mailto:editor@theinkhome.com" className="text-ink-accent hover:underline">editor@theinkhome.com</a>.
+                                For submissions or feedback, please use the form below or email us directly at <a href={`mailto:${CONTACT_EMAIL}`} className="text-ink-accent hover:underline">{CONTACT_EMAIL}</a>.
                             </p>
                             <form onSubmit={handleSubmit} className="space-y-6">
+                                {/* Visible note about verifying the receiving email for FormSubmit */}
+                                <div className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                    <strong>Note:</strong> The contact form uses FormSubmit.co to deliver messages. The first time this address is used you'll receive a confirmation email at <span className="font-mono">farhankabir236@gmail.com</span> — please confirm that message so future submissions are forwarded to your inbox.
+                                </div>
+                                {/* Honeypot field for spam bots */}
+                                <input type="text" name="_honey" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+                                {/* Optional: disable default browser autocomplete for sensitive fields */}
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Name</label>
-                                    <input required type="text" id="name" name="name" className="w-full px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-ink-accent transition-colors duration-500" />
+                                    <input
+                                        required
+                                        type="text"
+                                        id="name"
+                                        name="name"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-ink-accent transition-colors duration-500"
+                                    />
                                 </div>
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Email</label>
-                                    <input required type="email" id="email" name="email" className="w-full px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-ink-accent transition-colors duration-500" />
+                                    <input
+                                        required
+                                        type="email"
+                                        id="email"
+                                        name="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-ink-accent transition-colors duration-500"
+                                    />
                                 </div>
                                 <div>
                                     <label htmlFor="message" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Message</label>
-                                    <textarea required id="message" name="message" rows={5} className="w-full px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-ink-accent transition-colors duration-500"></textarea>
+                                    <textarea
+                                        required
+                                        id="message"
+                                        name="message"
+                                        rows={5}
+                                        value={message}
+                                        onChange={(e) => setMessage(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-ink-accent transition-colors duration-500"
+                                    ></textarea>
                                 </div>
+                                {error && (
+                                    <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+                                )}
                                 <div className="text-center">
                                     <button 
                                         type="submit" 
