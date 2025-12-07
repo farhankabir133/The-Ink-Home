@@ -37,7 +37,8 @@ const Header: React.FC = () => {
         };
     }, []);
 
-    const navLinkClasses = "px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-ink-accent dark:hover:text-ink-accent transition-colors";
+    // Increase the navbar font size for better readability on desktop
+    const navLinkClasses = "px-3 py-2 text-lg text-slate-600 dark:text-slate-300 hover:text-ink-accent dark:hover:text-ink-accent transition-colors";
     const activeNavLinkClasses = "text-ink-accent dark:text-ink-accent font-semibold";
 
     return (
