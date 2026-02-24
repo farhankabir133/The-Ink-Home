@@ -1,0 +1,162 @@
+/**
+ * Unit Tests for useReadingTime Hook
+ * 
+ * These tests ensure the reading time calculation handles:
+ * - Empty strings
+ * - Very short posts
+ * - Normal articles
+ * - Very long content
+ * - Edge cases with special characters
+ */
+
+import { useReadingTime, formatReadingTime } from '../hooks/useReadingTime';
+
+// Mock React hooks for testing
+const mockUseMemo = (fn: () => any) => fn();
+jest.mock('react', () => ({
+  ...jest.requireActual('react'),
+  useMemo: (fn: () => any) => fn(),
+}));
+
+describe('useReadingTime Hook', () => {
+  describe('Basic Calculations', () => {
+    test('returns 1 minute for empty string', () => {
+      const result = useReadingTime('');
+      expect(result).toBe(1);
+    });
+
+    test('returns 1 minute for whitespace-only string', () => {
+      const result = useReadingTime('   \n\t   ');
+      expect(result).toBe(1);
+    });
+
+    test('returns 1 minute for very short text (< 225 words)', () => {
+      const shortText = 'This is a very short article.';
+      const result = useReadingTime(shortText);
+      expect(result).toBe(1);
+    });
+
+    test('calculates correct time for ~225 words (1 minute)', () => {
+      const words = new Array(225).fill('word').join(' ');
+      const result = useReadingTime(words);
+      expect(result).toBe(1);
+    });
+
+    test('calculates correct time for ~450 words (2 minutes)', () => {
+      const words = new Array(450).fill('word').join(' ');
+      const result = useReadingTime(words);
+      expect(result).toBe(2);
+    });
+
+    test('calculates correct time for ~1125 words (5 minutes)', () => {
+      const words = new Array(1125).fill('word').join(' ');
+      const result = useReadingTime(words);
+      expect(result).toBe(5);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    test('handles text with multiple spaces between words', () => {
+      const text = 'This    has    multiple    spaces';
+      const result = useReadingTime(text);
+      expect(result).toBe(1); // Only 4 words
+    });
+
+    test('handles text with newlines', () => {
+      const text = 'Line one\nLine two\nLine three\nLine four';
+      const result = useReadingTime(text);
+      expect(result).toBe(1); // Only 8 words
+    });
+
+    test('handles text with special characters', () => {
+      const text = 'Hello! How are you? I\'m doing great. What about you?';
+      const result = useReadingTime(text);
+      expect(result).toBe(1); // 12 words
+    });
+
+    test('handles text with punctuation', () => {
+      const text = 'First, second; third: fourth - fifth (sixth) [seventh] {eighth}';
+      const result = useReadingTime(text);
+      expect(result).toBe(1);
+    });
+
+    test('handles very long content (2250 words = 10 minutes)', () => {
+      const longText = new Array(2250).fill('word').join(' ');
+      const result = useReadingTime(longText);
+      expect(result).toBe(10);
+    });
+  });
+
+  describe('Rounding Behavior', () => {
+    test('rounds up 226 words to 2 minutes', () => {
+      const words = new Array(226).fill('word').join(' ');
+      const result = useReadingTime(words);
+      expect(result).toBe(2);
+    });
+
+    test('rounds up 338 words (1.5 min) to 2 minutes', () => {
+      const words = new Array(338).fill('word').join(' ');
+      const result = useReadingTime(words);
+      expect(result).toBe(2);
+    });
+  });
+
+  describe('Real-World Scenarios', () => {
+    test('handles typical blog post (500 words)', () => {
+      const blogPost = new Array(500).fill('word').join(' ');
+      const result = useReadingTime(blogPost);
+      expect(result).toBe(3); // 500/225 = 2.22, rounds to 3
+    });
+
+    test('handles medium article (1000 words)', () => {
+      const article = new Array(1000).fill('word').join(' ');
+      const result = useReadingTime(article);
+      expect(result).toBe(5); // 1000/225 = 4.44, rounds to 5
+    });
+
+    test('handles long-form article (3000 words)', () => {
+      const longArticle = new Array(3000).fill('word').join(' ');
+      const result = useReadingTime(longArticle);
+      expect(result).toBe(14); // 3000/225 = 13.33, rounds to 14
+    });
+  });
+});
+
+describe('formatReadingTime', () => {
+  test('formats 1 minute correctly', () => {
+    expect(formatReadingTime(1)).toBe('1 min read');
+  });
+
+  test('formats 2 minutes correctly', () => {
+    expect(formatReadingTime(2)).toBe('2 min read');
+  });
+
+  test('formats 5 minutes correctly', () => {
+    expect(formatReadingTime(5)).toBe('5 min read');
+  });
+
+  test('formats 10 minutes correctly', () => {
+    expect(formatReadingTime(10)).toBe('10 min read');
+  });
+
+  test('formats large numbers correctly', () => {
+    expect(formatReadingTime(45)).toBe('45 min read');
+  });
+});
+
+// Integration test
+describe('useReadingTime Integration', () => {
+  test('complete workflow from text to formatted output', () => {
+    const sampleArticle = `
+      This is a sample article with multiple paragraphs.
+      It contains exactly 250 words to test the reading time calculation.
+      ${new Array(245).fill('word').join(' ')}
+    `;
+    
+    const minutes = useReadingTime(sampleArticle);
+    const formatted = formatReadingTime(minutes);
+    
+    expect(minutes).toBeGreaterThan(0);
+    expect(formatted).toMatch(/\d+ min read/);
+  });
+});

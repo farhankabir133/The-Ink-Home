@@ -1,32 +1,76 @@
-/* Minimal global styles required by the app - created to satisfy import in index.tsx */
+/* ========================================
+   HYPER-REALISTIC "DIGITAL WRITING DESK" 
+   The Ink Home - Enhanced CSS
+   ======================================== */
+
 :root{
+  /* Modern Light Mode */
   --bg: #ffffff;
   --text: #0f1720;
+  
+  /* Book Mode (Sepia) - Hyper-Realistic Paper */
+  --book-bg: #f4ecd8;
+  --book-text: #5b4636;
+  --book-accent: #8b7355;
+  --book-border: #d4c4a8;
+  
+  /* Reading Progress Bar */
+  --progress-bg: rgba(163, 139, 119, 0.2);
+  --progress-fill: #a38b77;
 }
 
 *,*::before,*::after{box-sizing:border-box}
 html,body,#root{height:100%}
-/*
-  Font loading: the project uses the custom "Marryweather" font.
-  Place your font files at /fonts/Marryweather.woff2 and /fonts/Marryweather.woff
-  or replace the src URLs below with the Gumroad-hosted URLs if you have them.
-*/
-@font-face {
-  font-family: 'Marryweather';
-  src: url('/fonts/Marryweather.woff2') format('woff2'),
-       url('/fonts/Marryweather.woff') format('woff');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
 
 body{
   margin:0;
-  font-family: 'Marryweather', Georgia, 'Times New Roman', serif;
+  font-family: 'Libre Baskerville', 'Playfair Display', Georgia, serif;
   background:var(--bg);
   color:var(--text);
+  line-height: 1.6;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
+  
+  /* Organic Paper Texture using CSS */
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: 
+    radial-gradient(circle at 20% 50%, transparent 0%, rgba(0,0,0,0.05) 100%),
+    radial-gradient(circle at 80% 80%, transparent 0%, rgba(0,0,0,0.03) 100%),
+    radial-gradient(circle at 40% 20%, transparent 0%, rgba(0,0,0,0.02) 100%);
+  background-size: 
+    200px 200px,
+    150px 150px,
+    100px 100px;
+  background-position: 
+    0 0,
+    50px 50px,
+    100px 100px;
+  mix-blend-mode: multiply;
+}
+
+/* Book Mode Enhancement */
+body.book-mode {
+  background: var(--book-bg);
+  color: var(--book-text);
+}
+
+body.book-mode::before {
+  opacity: 0.06;
+  background-image: 
+    radial-gradient(circle at 20% 50%, transparent 0%, rgba(91, 70, 54, 0.08) 100%),
+    radial-gradient(circle at 80% 80%, transparent 0%, rgba(91, 70, 54, 0.05) 100%);
 }
 
 /* Basic link and image defaults */
@@ -36,4 +80,196 @@ img{max-width:100%;display:block}
 /* Utility container used by pages */
 .container{width:100%;max-width:1200px;margin:0 auto;padding:0 1rem}
 
-/* Add any additional global styles below */
+/* ========================================
+   SMOOTH VIEWPORT ANIMATIONS
+   ======================================== */
+
+/* Article Card Fade-In on Scroll */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.article-card-animated {
+  animation: fadeInUp 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+/* Stagger effect for multiple cards */
+.article-card-animated:nth-child(1) { animation-delay: 0.1s; }
+.article-card-animated:nth-child(2) { animation-delay: 0.2s; }
+.article-card-animated:nth-child(3) { animation-delay: 0.3s; }
+.article-card-animated:nth-child(4) { animation-delay: 0.4s; }
+.article-card-animated:nth-child(5) { animation-delay: 0.5s; }
+.article-card-animated:nth-child(6) { animation-delay: 0.6s; }
+
+/* ========================================
+   READING PROGRESS BAR
+   ======================================== */
+
+#reading-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: var(--progress-bg);
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#reading-progress-bar.visible {
+  opacity: 1;
+}
+
+#reading-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--progress-fill), #c4a676);
+  width: 0%;
+  transition: width 0.15s ease-out;
+  box-shadow: 0 0 10px rgba(163, 139, 119, 0.5);
+}
+
+/* ========================================
+   READING TIME BADGE
+   ======================================== */
+
+.reading-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  background: rgba(163, 139, 119, 0.1);
+  border: 1px solid rgba(163, 139, 119, 0.3);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  color: var(--book-accent);
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+}
+
+.reading-time::before {
+  content: '📖';
+  font-size: 1rem;
+}
+
+/* ========================================
+   ENHANCED TYPOGRAPHY
+   ======================================== */
+
+.prose-enhanced {
+  font-family: 'Libre Baskerville', 'Playfair Display', Georgia, serif;
+  line-height: 1.8;
+  font-size: 1.125rem;
+  color: var(--text);
+}
+
+.prose-enhanced p {
+  margin-bottom: 1.5rem;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.prose-enhanced h1,
+.prose-enhanced h2,
+.prose-enhanced h3 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+body.book-mode .prose-enhanced {
+  color: var(--book-text);
+}
+
+/* ========================================
+   SEARCH NO RESULTS MESSAGE
+   ======================================== */
+
+.no-results-message {
+  text-align: center;
+  padding: 4rem 2rem;
+  font-family: 'Playfair Display', serif;
+  color: var(--book-accent);
+  font-size: 1.5rem;
+  opacity: 0;
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.no-results-message::before {
+  content: '🔍';
+  display: block;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+/* ── MediumPage modern animation utilities ───────────────────────────── */
+
+.glow-card {
+  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1),
+              box-shadow 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.glow-card:hover {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 0 0 1px rgba(163,139,119,0.25),
+              0 12px 40px -8px rgba(163,139,119,0.4),
+              0 0 24px 2px rgba(163,139,119,0.15);
+}
+
+.text-reveal {
+  overflow: hidden;
+  display: inline-block;
+}
+
+.stat-counter {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.02em;
+}
+
+/* staggered entrance for direct children */
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 80ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 320ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 400ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 480ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 560ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 640ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 720ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 800ms; }
+.stagger-children > *:nth-child(12) { animation-delay: 880ms; }
+
+/* ticker / live bar shimmer */
+.ticker-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(163,139,119,0.08) 0%,
+    rgba(163,139,119,0.22) 50%,
+    rgba(163,139,119,0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.4s linear infinite;
+}
+
+/* skeleton shimmer for MediumPage */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 0%,
+    #f1f5f9 50%,
+    #e2e8f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 0.5rem;
+}

@@ -1,10 +1,15 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { articles } from '../constants/articles';
+import { useReadingTime, formatReadingTime } from '../hooks/useReadingTime';
 
 const ArticleDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const article = articles.find(a => a.id === parseInt(id || ''));
+    
+    // Calculate reading time
+    const readingTimeMinutes = useReadingTime(article?.content || '');
+    const readingTimeText = formatReadingTime(readingTimeMinutes);
 
     if (!article) {
         return (
@@ -35,8 +40,14 @@ const ArticleDetailPage: React.FC = () => {
                     <h1 className="text-4xl md:text-6xl font-serif font-bold mb-4 tracking-tight">
                         {article.title}
                     </h1>
-                    <div className="text-lg text-slate-200">
-                        <span>By {article.author}</span> &middot; <span>{article.date}</span>
+                    <div className="text-lg text-slate-200 flex items-center justify-center flex-wrap gap-3">
+                        <span>By {article.author}</span> 
+                        <span>&middot;</span> 
+                        <span>{article.date}</span>
+                        <span>&middot;</span>
+                        <span className="reading-time bg-white/20 backdrop-blur-sm border-white/30">
+                            {readingTimeText}
+                        </span>
                     </div>
                 </div>
             </header>

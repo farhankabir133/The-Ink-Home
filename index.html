@@ -1,35 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF--8" />
-  <!-- Favicon and app icons -->
-  <!-- Primary favicon (PNG) from the project's icon folder -->
-  <link rel="icon" type="image/png" href="/icon/The_Ink_Home.png" />
-  <!-- Apple touch icon -->
-  <link rel="apple-touch-icon" href="/icon/The_Ink_Home.png">
-  <!-- Fallback SVG (if present) -->
-  <link rel="alternate icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
     <title>The Ink Home | Stories that feel like home.</title>
-    <meta name="description" content="A Medium publication sharing creative essays, reflections, and human stories.">
+    <meta name="title" content="The Ink Home | Stories that feel like home." />
+    <meta name="description" content="A Medium publication sharing creative essays, reflections, and human stories. Discover thoughtful narratives that resonate with the heart and mind." />
+    <meta name="keywords" content="The Ink Home, Medium publication, creative writing, essays, reflections, storytelling, creative nonfiction, human stories" />
+    <meta name="author" content="The Ink Home" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://farhankabir133.github.io/The-Ink-Home/" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://farhankabir133.github.io/The-Ink-Home/" />
+    <meta property="og:title" content="The Ink Home | Stories that feel like home." />
+    <meta property="og:description" content="A Medium publication sharing creative essays, reflections, and human stories. Discover thoughtful narratives that resonate with the heart and mind." />
+    <meta property="og:image" content="https://farhankabir133.github.io/The-Ink-Home/og-image.jpg" />
+    <meta property="og:image:alt" content="The Ink Home - A Digital Writing Desk" />
+    <meta property="og:site_name" content="The Ink Home" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://farhankabir133.github.io/The-Ink-Home/" />
+    <meta name="twitter:title" content="The Ink Home | Stories that feel like home." />
+    <meta name="twitter:description" content="A Medium publication sharing creative essays, reflections, and human stories." />
+    <meta name="twitter:image" content="https://farhankabir133.github.io/The-Ink-Home/og-image.jpg" />
+    <meta name="twitter:creator" content="@TheInkHome" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "name": "The Ink Home",
+      "description": "A Medium publication sharing creative essays, reflections, and human stories.",
+      "url": "https://farhankabir133.github.io/The-Ink-Home/",
+      "image": "https://farhankabir133.github.io/The-Ink-Home/og-image.jpg",
+      "author": {
+        "@type": "Organization",
+        "name": "The Ink Home"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "The Ink Home",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://farhankabir133.github.io/The-Ink-Home/logo.png"
+        }
+      },
+      "inLanguage": "en-US",
+      "genre": ["Creative Writing", "Essays", "Reflections", "Storytelling"],
+      "keywords": "creative essays, reflections, human stories, creative nonfiction, literary magazine"
+    }
+    </script>
+    
+    <!-- Additional Schema for CreativeWork -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "The Ink Home",
+      "url": "https://farhankabir133.github.io/The-Ink-Home/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://farhankabir133.github.io/The-Ink-Home/#/publication?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
     
     <!-- Tailwind CSS with Typography Plugin -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 
-    <!-- NOTE: The site uses the 'Marryweather' font as the single text face.
-         Host the font files (WOFF2/WOFF) in /fonts or replace the URL below
-         with the Gumroad-hosted URL if you have a license and a link. -->
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
     <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
-            // Set both serif and sans stacks to use Marryweather so all text
-            // across the site renders with the same font when available.
             fontFamily: {
-              sans: ['Marryweather', 'serif'],
-              serif: ['Marryweather', 'serif'],
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
             },
             colors: {
               'ink-dark': '#1a1a1a',
@@ -49,12 +117,42 @@
               marquee: {
                 '0%': { transform: 'translateX(0%)' },
                 '100%': { transform: 'translateX(-50%)' },
-              }
+              },
+              slideInLeft: {
+                '0%': { opacity: '0', transform: 'translateX(-40px)' },
+                '100%': { opacity: '1', transform: 'translateX(0)' },
+              },
+              slideInRight: {
+                '0%': { opacity: '0', transform: 'translateX(40px)' },
+                '100%': { opacity: '1', transform: 'translateX(0)' },
+              },
+              glowPulse: {
+                '0%, 100%': { boxShadow: '0 0 0 0 rgba(163,139,119,0)' },
+                '50%': { boxShadow: '0 0 24px 6px rgba(163,139,119,0.35)' },
+              },
+              revealClip: {
+                '0%': { clipPath: 'inset(0 100% 0 0)', opacity: '1' },
+                '100%': { clipPath: 'inset(0 0% 0 0)', opacity: '1' },
+              },
+              countUp: {
+                '0%': { opacity: '0', transform: 'translateY(12px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              shimmer: {
+                '0%': { backgroundPosition: '-200% 0' },
+                '100%': { backgroundPosition: '200% 0' },
+              },
             },
             animation: {
               fadeInUp: 'fadeInUp 0.8s ease-out forwards',
               scaleIn: 'scaleIn 0.5s ease-out forwards',
               marquee: 'marquee 30s linear infinite',
+              slideInLeft: 'slideInLeft 0.6s cubic-bezier(0.16,1,0.3,1) forwards',
+              slideInRight: 'slideInRight 0.6s cubic-bezier(0.16,1,0.3,1) forwards',
+              glowPulse: 'glowPulse 2.2s ease-in-out infinite',
+              revealClip: 'revealClip 0.7s cubic-bezier(0.16,1,0.3,1) forwards',
+              countUp: 'countUp 0.5s ease-out forwards',
+              shimmer: 'shimmer 2s linear infinite',
             }
           },
         },

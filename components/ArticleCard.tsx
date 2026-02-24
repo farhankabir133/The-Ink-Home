@@ -1,14 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Article } from '../types';
+import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 
 interface ArticleCardProps {
   article: Article;
 }
 
 const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
+  const [ref, isVisible] = useIntersectionObserver({ threshold: 0.1, triggerOnce: true });
+  
   const cardContent = (
-    <article className="bg-white dark:bg-slate-800/50 rounded-lg overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 ease-in-out transform hover:-translate-y-1 h-full flex flex-col">
+    <article className={`bg-white dark:bg-slate-800/50 rounded-lg overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 ease-in-out transform hover:-translate-y-1 h-full flex flex-col ${isVisible ? 'article-card-animated' : 'opacity-0'}`}>
       <div className="overflow-hidden">
         <img 
           src={article.imageUrl} 
@@ -39,14 +42,14 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
 
   if (article.externalUrl) {
     return (
-      <a href={article.externalUrl} target="_blank" rel="noopener noreferrer" className="block group h-full">
+      <a href={article.externalUrl} target="_blank" rel="noopener noreferrer" className="block group h-full" ref={ref}>
         {cardContent}
       </a>
     );
   }
 
   return (
-    <Link to={`/publication/${article.id}`} className="block group h-full">
+    <Link to={`/publication/${article.id}`} className="block group h-full" ref={ref}>
       {cardContent}
     </Link>
   );
