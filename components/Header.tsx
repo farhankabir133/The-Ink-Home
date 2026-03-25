@@ -1,98 +1,348 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useDarkMode } from '../hooks/useDarkMode';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ICONS
+// ─────────────────────────────────────────────────────────────────────────────
+
 const SunIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
     </svg>
 );
 
 const MoonIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
     </svg>
 );
 
+// Animated feather quill icon for branding
+const QuillIcon = () => (
+    <svg className="w-7 h-7 text-ink-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" />
+        <line x1="16" y1="8" x2="2" y2="22" />
+        <line x1="17.5" y1="15" x2="9" y2="15" />
+    </svg>
+);
+
 const socialLinks = [
-    { name: 'Twitter', href: '#', icon: <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" /></svg> },
-    { name: 'Medium', href: '#', icon: <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M7.45 2.68H4V21.31h3.45V2.68zM20 2.68h-3.45v18.63H20V2.68zM14.48 2.68h-4.96v18.63h4.96V2.68z"></path></svg> },
-    { name: 'GitHub', href: '#', icon: <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.164 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" /></svg> },
-    { name: 'Facebook', href: '#', icon: <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" /></svg> },
-    { name: 'LinkedIn', href: '#', icon: <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg> },
+    { name: 'Twitter', href: 'https://twitter.com', icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+    { name: 'Medium', href: 'https://medium.com/the-ink-home', icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/></svg> },
+    { name: 'GitHub', href: 'https://github.com/farhankabir133', icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.164 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" /></svg> },
+    { name: 'LinkedIn', href: 'https://linkedin.com', icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> },
 ];
+
+const navItems = [
+    { path: '/', label: 'Home' },
+    { path: '/about', label: 'About' },
+    { path: '/publication', label: 'Publication' },
+    { path: '/medium', label: 'Medium' },
+    { path: '/contact', label: 'Contact' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANIMATED NAV LINK COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface NavItemProps {
+    to: string;
+    label: string;
+    onClick?: () => void;
+}
+
+const NavItem: React.FC<NavItemProps> = ({ to, label, onClick }) => {
+    const location = useLocation();
+    const isActive = location.pathname === to;
+
+    return (
+        <NavLink
+            to={to}
+            onClick={onClick}
+            className="group relative px-4 py-2 font-medium text-sm tracking-wide uppercase"
+        >
+            {/* Text with hover effect */}
+            <span className={`relative z-10 transition-colors duration-300 ${
+                isActive 
+                    ? 'text-ink-accent' 
+                    : 'text-slate-600 dark:text-slate-300 group-hover:text-ink-accent'
+            }`}>
+                {label}
+            </span>
+            
+            {/* Animated underline */}
+            <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-gradient-to-r from-transparent via-ink-accent to-transparent transition-all duration-300 ease-out ${
+                isActive ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-70'
+            }`} />
+            
+            {/* Glow effect on active */}
+            {isActive && (
+                <span className="absolute inset-0 -z-10 bg-ink-accent/5 dark:bg-ink-accent/10 rounded-lg blur-sm" />
+            )}
+        </NavLink>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HAMBURGER MENU COMPONENT (Animated)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface HamburgerProps {
+    isOpen: boolean;
+    toggle: () => void;
+}
+
+const Hamburger: React.FC<HamburgerProps> = ({ isOpen, toggle }) => (
+    <button
+        onClick={toggle}
+        className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ink-accent/50"
+        aria-label="Toggle menu"
+    >
+        <div className="w-5 h-4 flex flex-col justify-between">
+            <span className={`block h-0.5 bg-slate-700 dark:bg-slate-200 rounded-full transform transition-all duration-300 origin-center ${isOpen ? 'rotate-45 translate-y-[7px]' : ''}`} />
+            <span className={`block h-0.5 bg-slate-700 dark:bg-slate-200 rounded-full transition-all duration-200 ${isOpen ? 'opacity-0 scale-x-0' : 'opacity-100'}`} />
+            <span className={`block h-0.5 bg-slate-700 dark:bg-slate-200 rounded-full transform transition-all duration-300 origin-center ${isOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} />
+        </div>
+    </button>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SOCIAL LINK COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SocialLinkProps {
+    href: string;
+    icon: React.ReactNode;
+    name: string;
+}
+
+const SocialLink: React.FC<SocialLinkProps> = ({ href, icon, name }) => (
+    <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative p-2.5 rounded-full bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:text-ink-accent hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 hover:scale-110"
+        aria-label={name}
+    >
+        <span className="relative z-10">{icon}</span>
+        {/* Tooltip */}
+        <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 text-xs font-medium text-white bg-slate-800 dark:bg-slate-700 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            {name}
+        </span>
+    </a>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME TOGGLE BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ThemeToggleProps {
+    theme: string;
+    toggleTheme: () => void;
+}
+
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, toggleTheme }) => (
+    <button
+        onClick={toggleTheme}
+        className="relative p-2.5 rounded-full bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:text-ink-accent hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 hover:scale-110 hover:rotate-12"
+        aria-label="Toggle theme"
+    >
+        <div className="relative w-5 h-5">
+            {/* Sun icon */}
+            <span className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${theme === 'dark' ? 'opacity-100 rotate-0' : 'opacity-0 rotate-90'}`}>
+                <SunIcon />
+            </span>
+            {/* Moon icon */}
+            <span className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${theme === 'light' ? 'opacity-100 rotate-0' : 'opacity-0 -rotate-90'}`}>
+                <MoonIcon />
+            </span>
+        </div>
+    </button>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN HEADER COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
 
 const Header: React.FC = () => {
     const [theme, toggleTheme] = useDarkMode();
     const [isSticky, setSticky] = useState(false);
     const [isMenuOpen, setMenuOpen] = useState(false);
+    const [scrollProgress, setScrollProgress] = useState(0);
+    const headerRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
         const handleScroll = () => {
-            setSticky(window.scrollY > 10);
+            setSticky(window.scrollY > 20);
+            
+            // Calculate scroll progress
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            setScrollProgress(scrolled || 0);
         };
-        window.addEventListener('scroll', handleScroll);
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-        };
+        
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const navLinkClasses = "px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-ink-accent dark:hover:text-ink-accent transition-colors";
-    const activeNavLinkClasses = "text-ink-accent dark:text-ink-accent font-semibold";
+    // Close menu on route change
+    useEffect(() => {
+        setMenuOpen(false);
+    }, []);
+
+    // Prevent body scroll when menu is open
+    useEffect(() => {
+        if (isMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isMenuOpen]);
 
     return (
-        <header className={`sticky top-0 z-50 transition-all duration-300 ${isSticky ? 'bg-white/80 dark:bg-ink-dark/80 backdrop-blur-sm shadow-md' : 'bg-transparent'}`}>
-            <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
-                <NavLink to="/" className="text-2xl font-serif font-bold text-slate-800 dark:text-slate-100">
-                    The Ink Home
-                </NavLink>
-                <div className="hidden md:flex items-center space-x-4">
-                    <NavLink to="/" className={({ isActive }) => isActive ? `${navLinkClasses} ${activeNavLinkClasses}` : navLinkClasses}>Home</NavLink>
-                    <NavLink to="/about" className={({ isActive }) => isActive ? `${navLinkClasses} ${activeNavLinkClasses}` : navLinkClasses}>About</NavLink>
-                    <NavLink to="/publication" className={({ isActive }) => isActive ? `${navLinkClasses} ${activeNavLinkClasses}` : navLinkClasses}>Publication</NavLink>
-                    <NavLink to="/medium" className={({ isActive }) => isActive ? `${navLinkClasses} ${activeNavLinkClasses}` : navLinkClasses}>Medium</NavLink>
-                    <NavLink to="/contact" className={({ isActive }) => isActive ? `${navLinkClasses} ${activeNavLinkClasses}` : navLinkClasses}>Contact</NavLink>
-                    <div className="h-6 w-px bg-slate-300 dark:bg-slate-600 mx-2"></div>
-                    {socialLinks.map((item) => (
-                        <a key={item.name} href={item.href} className="text-slate-500 dark:text-slate-400 hover:text-ink-accent dark:hover:text-ink-accent transition-colors">
-                            <span className="sr-only">{item.name}</span>
-                            {item.icon}
-                        </a>
-                    ))}
-                    <button onClick={toggleTheme} className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                        {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-                    </button>
-                </div>
-                <div className="md:hidden flex items-center">
-                     <button onClick={toggleTheme} className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors mr-2">
-                        {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-                    </button>
-                    <button onClick={() => setMenuOpen(!isMenuOpen)} className="text-slate-800 dark:text-slate-100 focus:outline-none">
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16m-7 6h7"}></path>
-                        </svg>
-                    </button>
-                </div>
-            </nav>
-            {isMenuOpen && (
-                <div className="md:hidden bg-white dark:bg-ink-dark pb-4">
-                    <NavLink to="/" className="block text-center py-2 text-lg text-slate-600 dark:text-slate-300" onClick={() => setMenuOpen(false)}>Home</NavLink>
-                    <NavLink to="/about" className="block text-center py-2 text-lg text-slate-600 dark:text-slate-300" onClick={() => setMenuOpen(false)}>About</NavLink>
-                    <NavLink to="/publication" className="block text-center py-2 text-lg text-slate-600 dark:text-slate-300" onClick={() => setMenuOpen(false)}>Publication</NavLink>
-                    <NavLink to="/medium" className="block text-center py-2 text-lg text-slate-600 dark:text-slate-300" onClick={() => setMenuOpen(false)}>Medium</NavLink>
-                    <NavLink to="/contact" className="block text-center py-2 text-lg text-slate-600 dark:text-slate-300" onClick={() => setMenuOpen(false)}>Contact</NavLink>
-                    <div className="border-t border-slate-200 dark:border-slate-700 my-4"></div>
-                    <div className="flex justify-center items-center space-x-6">
-                        {socialLinks.map((item) => (
-                            <a key={item.name} href={item.href} className="text-slate-500 dark:text-slate-400 hover:text-ink-accent dark:hover:text-ink-accent transition-colors">
-                                <span className="sr-only">{item.name}</span>
-                                {item.icon}
-                            </a>
+        <>
+            <header
+                ref={headerRef}
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
+                    isSticky 
+                        ? 'py-2 bg-white/90 dark:bg-ink-dark/90 backdrop-blur-xl shadow-lg shadow-black/5 dark:shadow-black/20' 
+                        : 'py-4 bg-transparent'
+                }`}
+            >
+                {/* Scroll Progress Bar */}
+                <div 
+                    className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-ink-accent via-ink-accent/80 to-ink-accent transition-all duration-150 ease-out"
+                    style={{ width: `${scrollProgress}%` }}
+                />
+                
+                {/* Decorative top border glow */}
+                <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ink-accent/30 to-transparent transition-opacity duration-500 ${isSticky ? 'opacity-100' : 'opacity-0'}`} />
+
+                <nav className="max-w-7xl mx-auto px-6 lg:px-10 flex justify-between items-center">
+                    {/* ─── Logo ─── */}
+                    <NavLink 
+                        to="/" 
+                        className="group flex items-center gap-3 transition-transform duration-300 hover:scale-[1.02]"
+                    >
+                        <div className="relative">
+                            <QuillIcon />
+                            {/* Glow effect */}
+                            <span className="absolute inset-0 bg-ink-accent/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xl lg:text-2xl font-serif font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+                                The Ink Home
+                            </span>
+                            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-ink-accent/80 hidden sm:block">
+                                Stories that feel like home
+                            </span>
+                        </div>
+                    </NavLink>
+
+                    {/* ─── Desktop Navigation ─── */}
+                    <div className="hidden lg:flex items-center">
+                        {/* Nav Links Container */}
+                        <div className="flex items-center bg-slate-50/50 dark:bg-slate-800/30 rounded-full px-2 py-1 border border-slate-200/50 dark:border-slate-700/50">
+                            {navItems.map((item) => (
+                                <NavItem key={item.path} to={item.path} label={item.label} />
+                            ))}
+                        </div>
+
+                        {/* Divider */}
+                        <div className="mx-6 h-8 w-px bg-gradient-to-b from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
+
+                        {/* Social Links */}
+                        <div className="flex items-center gap-2">
+                            {socialLinks.map((item) => (
+                                <SocialLink key={item.name} href={item.href} icon={item.icon} name={item.name} />
+                            ))}
+                        </div>
+
+                        {/* Divider */}
+                        <div className="mx-4 h-8 w-px bg-gradient-to-b from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
+
+                        {/* Theme Toggle */}
+                        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+                    </div>
+
+                    {/* ─── Mobile Controls ─── */}
+                    <div className="lg:hidden flex items-center gap-3">
+                        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+                        <Hamburger isOpen={isMenuOpen} toggle={() => setMenuOpen(!isMenuOpen)} />
+                    </div>
+                </nav>
+            </header>
+
+            {/* ─── Mobile Menu Overlay ─── */}
+            <div 
+                className={`fixed inset-0 z-40 lg:hidden transition-all duration-500 ${
+                    isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
+            >
+                {/* Backdrop */}
+                <div 
+                    className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                    onClick={() => setMenuOpen(false)}
+                />
+                
+                {/* Menu Panel */}
+                <div 
+                    className={`absolute top-0 right-0 w-full max-w-sm h-full bg-white dark:bg-ink-dark shadow-2xl transform transition-transform duration-500 ease-out ${
+                        isMenuOpen ? 'translate-x-0' : 'translate-x-full'
+                    }`}
+                >
+                    {/* Menu Header */}
+                    <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+                        <span className="text-lg font-serif font-bold text-slate-800 dark:text-slate-100">Menu</span>
+                        <button
+                            onClick={() => setMenuOpen(false)}
+                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                            <svg className="w-5 h-5 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Nav Links */}
+                    <div className="p-6 space-y-2">
+                        {navItems.map((item, index) => (
+                            <NavLink
+                                key={item.path}
+                                to={item.path}
+                                onClick={() => setMenuOpen(false)}
+                                className={({ isActive }) => `
+                                    block px-4 py-3 rounded-xl text-lg font-medium transition-all duration-300
+                                    ${isActive 
+                                        ? 'bg-ink-accent/10 text-ink-accent border-l-4 border-ink-accent' 
+                                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:pl-6'
+                                    }
+                                `}
+                                style={{ transitionDelay: `${index * 50}ms` }}
+                            >
+                                {item.label}
+                            </NavLink>
                         ))}
                     </div>
+
+                    {/* Social Links */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200 dark:border-slate-700">
+                        <p className="text-xs uppercase tracking-widest text-slate-400 mb-4">Connect with us</p>
+                        <div className="flex items-center gap-3">
+                            {socialLinks.map((item) => (
+                                <SocialLink key={item.name} href={item.href} icon={item.icon} name={item.name} />
+                            ))}
+                        </div>
+                    </div>
                 </div>
-            )}
-        </header>
+            </div>
+
+            {/* Spacer to prevent content from going under fixed header */}
+            <div className="h-20 lg:h-24" />
+        </>
     );
 };
 

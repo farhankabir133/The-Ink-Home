@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import ArticleCard from '../components/ArticleCard';
 import { useMediumFeed, MediumStory } from '../hooks/useMediumFeed';
 import {
@@ -9,12 +9,6 @@ import {
   topStory as staticTop,
   mediumArticles as staticArticles,
 } from '../constants/mediumArticles';
-import {
-  CATEGORIES,
-  getCategoryStats,
-  groupStoriesByCategory,
-  type Category,
-} from '../constants/categories';
 import type { Article } from '../types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -55,74 +49,17 @@ const Tag: React.FC<{ label: string }> = ({ label }) => (
   </span>
 );
 
-// ── Category Card Component ───────────────────────────────────────────────────
-interface CategoryCardProps {
-  categoryData: Category;
-  count: number;
-  idx: number;
-  onClick: () => void;
-}
-
-const CategoryCard: React.FC<CategoryCardProps> = ({ categoryData, count, idx, onClick }) => {
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        group relative overflow-hidden rounded-2xl p-6 text-left
-        bg-gradient-to-br ${categoryData.gradient}
-        transform hover:scale-[1.03] hover:-translate-y-1
-        transition-all duration-500 ease-out
-        shadow-lg hover:shadow-2xl
-        opacity-0 animate-fadeInUp
-        cursor-pointer
-      `}
-      style={{ animationDelay: `${idx * 80}ms` }}
-    >
-      {/* Animated background shimmer */}
-      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-out" />
-      
-      {/* Floating particles effect */}
-      <div className="absolute top-2 right-2 w-16 h-16 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
-      <div className="absolute bottom-4 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg group-hover:scale-200 transition-transform duration-500" />
-
-      <div className="relative z-10">
-        <span className="text-3xl mb-3 block group-hover:scale-110 transition-transform duration-300 origin-left">
-          {categoryData.emoji}
-        </span>
-        <h3 className="font-serif text-xl font-bold text-white mb-1 group-hover:tracking-wide transition-all duration-300">
-          {categoryData.name}
-        </h3>
-        <p className="text-white/80 text-sm mb-3 line-clamp-2">
-          {categoryData.description}
-        </p>
-        <div className="flex items-center justify-between">
-          <span className="text-white/60 text-xs font-medium">
-            {count} {count === 1 ? 'story' : 'stories'}
-          </span>
-          <span className="flex items-center gap-1 text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300">
-            Explore
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </span>
-        </div>
-      </div>
-    </button>
-  );
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 const HomePage: React.FC = () => {
   const [mounted, setMounted] = useState(false);
-  const navigate = useNavigate();
   useEffect(() => setMounted(true), []);
 
   // ── Live RSS feed ──────────────────────────────────────────────────────────
   const { stories: liveStories, loading, error } = useMediumFeed();
 
-  // Always use static fallback as base, merge with live when available
-  const useFallback = liveStories.length === 0;
+  // Use live data when available, otherwise fall back to static file
   const stories: MediumStory[] = liveStories.length > 0 ? liveStories : [];
+  const useFallback = !loading && liveStories.length === 0;
 
   // Derive sections from live feed OR static fallback
   const heroData = useFallback
@@ -154,17 +91,6 @@ const HomePage: React.FC = () => {
   const latestData: Article[] = useFallback
     ? staticArticles.filter(a => !a.featured).slice(0, 4)
     : stories.filter(s => !s.featured).slice(0, 4).map(toArticle);
-
-  // ── Category Data ──────────────────────────────────────────────────────────
-  const storiesForCategory = useFallback 
-    ? staticArticles.map(a => ({ tags: a.tags || [] }))
-    : stories.map(s => ({ tags: s.tags || [] }));
-
-  const categoryStats = getCategoryStats(storiesForCategory);
-
-  const handleCategoryClick = (categoryId: string) => {
-    navigate(`/medium?category=${encodeURIComponent(categoryId)}`);
-  };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -262,53 +188,6 @@ const HomePage: React.FC = () => {
           Showing cached stories — live feed temporarily unavailable.
         </div>
       )}
-
-      {/* ── EXPLORE BY CATEGORY ──────────────────────────────────────────── */}
-      <section className="container mx-auto px-6 py-20">
-        <div className="text-center mb-12">
-          <p className="text-ink-accent text-sm font-semibold uppercase tracking-widest mb-2">
-            Browse By Topic
-          </p>
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-800 dark:text-slate-100 mb-3">
-            Explore by Category
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-            Dive into our collection of stories organized by theme. From love and relationships to psychology and self-improvement.
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[0, 1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-40 rounded-2xl bg-slate-200 dark:bg-slate-700 animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {categoryStats.map(({ category, count }, idx) => (
-              <CategoryCard
-                key={category.id}
-                categoryData={category}
-                count={count}
-                idx={idx}
-                onClick={() => handleCategoryClick(category.id)}
-              />
-            ))}
-          </div>
-        )}
-
-        <div className="text-center mt-10">
-          <Link
-            to="/medium"
-            className="inline-flex items-center gap-2 text-ink-accent font-semibold hover:underline"
-          >
-            View all stories by category
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </Link>
-        </div>
-      </section>
 
       {/* ── MOST TALKED ABOUT ────────────────────────────────────────────── */}
       <section className="bg-amber-50 dark:bg-slate-900 border-y border-amber-200 dark:border-slate-700 py-14 px-6">

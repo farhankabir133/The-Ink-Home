@@ -288,17 +288,21 @@ const MediumPage: React.FC = () => {
   const { stories: liveStories, loading, error } = useMediumFeed();
 
   // Merge live feed + older static stories
+  // Priority: live feed if available, otherwise static fallback
   const allStories: MediumStory[] = useMemo(() => {
+    // Always start with static stories as base
+    const staticStories = mediumArticles.map(staticToMediumStory);
+    
     if (liveStories.length > 0) {
-      const liveUrls = new Set(liveStories.map(s => s.externalUrl));
-      const olderStatic = mediumArticles
-        .map(staticToMediumStory)
-        .filter(s => !liveUrls.has(s.externalUrl));
-      return [...liveStories, ...olderStatic];
+      // Live feed loaded: merge with static (live takes priority, dedup by title)
+      const liveTitles = new Set(liveStories.map(s => s.title.toLowerCase()));
+      const uniqueStatic = staticStories.filter(s => !liveTitles.has(s.title.toLowerCase()));
+      return [...liveStories, ...uniqueStatic];
     }
-    if (!loading) return mediumArticles.map(staticToMediumStory);
-    return [];
-  }, [liveStories, loading]);
+    
+    // No live stories (loading or error): use static fallback
+    return staticStories;
+  }, [liveStories]);
 
   // Search / filter state
   const [filteredStories, setFilteredStories] = useState<MediumStory[]>([]);

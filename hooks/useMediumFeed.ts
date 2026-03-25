@@ -122,9 +122,13 @@ function parseItems(xml: string): MediumStory[] {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-// allorigins.win is a simple open CORS proxy — returns { contents: "<xml>..." }
-const PROXY = 'https://api.allorigins.win/get?url=';
-const MEDIUM_FEED = encodeURIComponent('https://medium.com/feed/the-ink-home');
+// Multiple CORS proxies for redundancy
+const CORS_PROXIES = [
+  'https://api.allorigins.win/get?url=',
+  'https://corsproxy.io/?',
+  'https://api.codetabs.com/v1/proxy?quest=',
+];
+const MEDIUM_FEED = 'https://medium.com/feed/the-ink-home';
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -136,31 +140,61 @@ export function useMediumFeed(): UseMediumFeedResult {
   useEffect(() => {
     let cancelled = false;
 
+    async function tryProxy(proxyUrl: string): Promise<string> {
+      const url = proxyUrl.includes('allorigins') 
+        ? `${proxyUrl}${encodeURIComponent(MEDIUM_FEED)}`
+        : `${proxyUrl}${encodeURIComponent(MEDIUM_FEED)}`;
+      
+      const res = await fetch(url, { 
+        signal: AbortSignal.timeout(8000) // 8 second timeout
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
+      // allorigins returns { contents: "..." }
+      if (proxyUrl.includes('allorigins')) {
+        const wrapper = await res.json() as { contents: string };
+        if (!wrapper.contents) throw new Error('Empty response');
+        return wrapper.contents;
+      }
+      
+      // Other proxies return raw content
+      return await res.text();
+    }
+
     async function fetchFeed() {
-      try {
-        // Primary: raw RSS via CORS proxy
-        const res = await fetch(`${PROXY}${MEDIUM_FEED}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const wrapper = await res.json() as { contents: string; status: { http_code: number } };
-        if (!wrapper.contents) throw new Error('Empty proxy response');
+      let lastError: Error | null = null;
 
-        const parsed = parseItems(wrapper.contents);
-        if (parsed.length === 0) throw new Error('No items in feed');
-
-        if (!cancelled) { setStories(parsed); setError(null); }
-      } catch (primaryErr) {
-        // Fallback: rss2json (free tier, 10 items)
+      // Try each CORS proxy
+      for (const proxy of CORS_PROXIES) {
         try {
-          const res = await fetch(
-            'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fmedium.com%2Ffeed%2Fthe-ink-home',
-          );
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json() as { status: string; items: Array<{
-            title: string; author: string; pubDate: string; link: string;
-            guid: string; thumbnail: string; description: string; categories: string[];
-          }> };
-          if (data.status !== 'ok' || !data.items?.length) throw new Error('rss2json failed');
+          const xml = await tryProxy(proxy);
+          const parsed = parseItems(xml);
+          if (parsed.length > 0) {
+            if (!cancelled) { 
+              setStories(parsed); 
+              setError(null); 
+              setLoading(false);
+            }
+            return; // Success!
+          }
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error('Unknown error');
+          // Continue to next proxy
+        }
+      }
 
+      // All proxies failed, try rss2json as final fallback
+      try {
+        const res = await fetch(
+          'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fmedium.com%2Ffeed%2Fthe-ink-home',
+          { signal: AbortSignal.timeout(8000) }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json() as { status: string; items: Array<{
+          title: string; author: string; pubDate: string; link: string;
+          guid: string; thumbnail: string; description: string; categories: string[];
+        }> };
+        if (data.status === 'ok' && data.items?.length) {
           const parsed: MediumStory[] = data.items.map((item, idx) => ({
             id:          item.guid || item.link,
             title:       item.title,
@@ -173,14 +207,21 @@ export function useMediumFeed(): UseMediumFeedResult {
             featured:    idx < 3,
           }));
 
-          if (!cancelled) { setStories(parsed); setError(null); }
-        } catch {
-          if (!cancelled) {
-            setError(primaryErr instanceof Error ? primaryErr.message : 'Feed unavailable');
+          if (!cancelled) { 
+            setStories(parsed); 
+            setError(null);
+            setLoading(false);
           }
+          return;
         }
-      } finally {
-        if (!cancelled) setLoading(false);
+      } catch {
+        // rss2json also failed
+      }
+
+      // All feeds failed - set error state (pages will use static fallback)
+      if (!cancelled) {
+        setError(lastError?.message || 'Feed unavailable');
+        setLoading(false);
       }
     }
 

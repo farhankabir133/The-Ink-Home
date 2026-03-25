@@ -2,6 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import MediumSearchBar from '../components/MediumSearchBar';
 import { useMediumFeed, MediumStory } from '../hooks/useMediumFeed';
 import { mediumArticles } from '../constants/mediumArticles';
+import {
+  CATEGORIES,
+  getCategoryStats,
+  getPrimaryCategory,
+  type Category,
+} from '../constants/categories';
 
 // ── Author avatar initials ────────────────────────────────────────────────────
 const Avatar: React.FC<{ name: string }> = ({ name }) => (
@@ -28,72 +34,81 @@ const SkeletonCard: React.FC = () => (
 );
 
 // ── Story card ────────────────────────────────────────────────────────────────
-const StoryCard: React.FC<{ story: MediumStory; idx: number }> = ({ story, idx }) => (
-  <a
-    href={story.externalUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="group block bg-white dark:bg-slate-800/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 opacity-0 animate-fadeInUp h-full flex flex-col"
-    style={{ animationDelay: `${idx * 80}ms` }}
-  >
-    {/* Cover image */}
-    <div className="overflow-hidden h-52 flex-shrink-0">
-      <img
-        src={story.imageUrl}
-        alt={story.title}
-        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        loading="lazy"
-        onError={e => {
-          (e.target as HTMLImageElement).src =
-            'https://cdn-images-1.medium.com/proxy/1*TGH72Nnw24QL3iV9IOm4VA.png';
-        }}
-      />
-    </div>
-
-    <div className="p-5 flex flex-col flex-grow">
-      {/* Tags */}
-      {story.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {story.tags.slice(0, 3).map(t => (
-            <span
-              key={t}
-              className="text-xs bg-amber-50 dark:bg-amber-900/20 text-ink-accent font-medium px-2.5 py-0.5 rounded-full"
-            >
-              {t}
-            </span>
-          ))}
+const StoryCard: React.FC<{ story: MediumStory; idx: number }> = ({ story, idx }) => {
+  const category = getPrimaryCategory(story.tags || []);
+  
+  return (
+    <a
+      href={story.externalUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group block bg-white dark:bg-slate-800/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 opacity-0 animate-fadeInUp h-full flex flex-col"
+      style={{ animationDelay: `${idx * 80}ms` }}
+    >
+      {/* Cover image */}
+      <div className="relative overflow-hidden h-52 flex-shrink-0">
+        <img
+          src={story.imageUrl}
+          alt={story.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+          onError={e => {
+            (e.target as HTMLImageElement).src =
+              'https://cdn-images-1.medium.com/proxy/1*TGH72Nnw24QL3iV9IOm4VA.png';
+          }}
+        />
+        {/* Category badge on image */}
+        <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r ${category.gradient} text-white text-xs font-semibold shadow-md`}>
+          <span>{category.emoji}</span>
+          <span>{category.name.split(' ')[0]}</span>
         </div>
-      )}
-
-      {/* Title */}
-      <h3 className="font-serif text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug mb-2 group-hover:text-ink-accent transition-colors duration-300 flex-grow">
-        {story.title}
-      </h3>
-
-      {/* Excerpt */}
-      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 mb-4">
-        {story.excerpt}
-      </p>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100 dark:border-slate-700">
-        <div className="flex items-center gap-2">
-          <Avatar name={story.author} />
-          <div>
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{story.author}</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">{story.date}</p>
-          </div>
-        </div>
-        <span className="text-xs font-semibold text-ink-accent flex items-center gap-1 group-hover:gap-2 transition-all">
-          Read
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
-        </span>
       </div>
-    </div>
-  </a>
-);
+
+      <div className="p-5 flex flex-col flex-grow">
+        {/* Tags */}
+        {story.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {story.tags.slice(0, 3).map(t => (
+              <span
+                key={t}
+                className="text-xs bg-amber-50 dark:bg-amber-900/20 text-ink-accent font-medium px-2.5 py-0.5 rounded-full"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Title */}
+        <h3 className="font-serif text-xl font-bold text-slate-800 dark:text-slate-100 leading-snug mb-2 group-hover:text-ink-accent transition-colors duration-300 flex-grow">
+          {story.title}
+        </h3>
+
+        {/* Excerpt */}
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 mb-4">
+          {story.excerpt}
+        </p>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100 dark:border-slate-700">
+          <div className="flex items-center gap-2">
+            <Avatar name={story.author} />
+            <div>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{story.author}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{story.date}</p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-ink-accent flex items-center gap-1 group-hover:gap-2 transition-all">
+            Read
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </a>
+  );
+};
 
 // ── Author filter tab ─────────────────────────────────────────────────────────
 const AUTHORS = ['All', 'Farhan Kabir', 'Dua Batool'] as const;
@@ -123,24 +138,27 @@ const PublicationPage: React.FC = () => {
   const { stories: liveStories, loading, error } = useMediumFeed();
 
   // Merge live feed + older static-only stories (dedup by externalUrl)
-  // When live feed works: show 10 live + up to 4 older archived stories = up to 14 total
-  // When offline/error: show all static (14 stories)
+  // Priority: live feed if available, otherwise static fallback
   const allStories: MediumStory[] = useMemo(() => {
+    // Always start with static stories as base
+    const staticStories = mediumArticles.map(staticToMediumStory);
+    
     if (liveStories.length > 0) {
-      // Live feed loaded: merge with older static-only stories not in live feed
-      const liveUrls = new Set(liveStories.map(s => s.externalUrl));
-      const olderStatic = mediumArticles
-        .map(staticToMediumStory)
-        .filter(s => !liveUrls.has(s.externalUrl));
-      return [...liveStories, ...olderStatic];
+      // Live feed loaded: merge with static (live takes priority, dedup by title)
+      const liveTitles = new Set(liveStories.map(s => s.title.toLowerCase()));
+      const uniqueStatic = staticStories.filter(s => !liveTitles.has(s.title.toLowerCase()));
+      return [...liveStories, ...uniqueStatic];
     }
-    // Live feed failed/loading: fall back to static list
-    if (!loading) return mediumArticles.map(staticToMediumStory);
-    return [];
-  }, [liveStories, loading]);
+    
+    // No live stories (loading or error): use static fallback
+    return staticStories;
+  }, [liveStories]);
 
   // Author filter
   const [authorFilter, setAuthorFilter] = useState<AuthorFilter>('All');
+
+  // Category filter
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   // Search-filtered stories (starts as full list, updated by MediumSearchBar)
   const [searchFiltered, setSearchFiltered] = useState<MediumStory[]>([]);
@@ -148,11 +166,31 @@ const PublicationPage: React.FC = () => {
     setSearchFiltered(allStories);
   }, [allStories]);
 
-  // Apply author filter on top of search
+  // Category stats for filter badges
+  const categoryStats = useMemo(() => {
+    const storiesWithTags = allStories.map(s => ({ tags: s.tags || [] }));
+    return getCategoryStats(storiesWithTags);
+  }, [allStories]);
+
+  // Apply author + category filter on top of search
   const displayStories = useMemo(() => {
-    if (authorFilter === 'All') return searchFiltered;
-    return searchFiltered.filter(s => s.author === authorFilter);
-  }, [searchFiltered, authorFilter]);
+    let filtered = searchFiltered;
+    
+    // Apply author filter
+    if (authorFilter !== 'All') {
+      filtered = filtered.filter(s => s.author === authorFilter);
+    }
+    
+    // Apply category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(s => {
+        const storyCategory = getPrimaryCategory(s.tags || []);
+        return storyCategory.id === categoryFilter;
+      });
+    }
+    
+    return filtered;
+  }, [searchFiltered, authorFilter, categoryFilter]);
 
   // Author counts for badges
   const farhanCount = allStories.filter(s => s.author === 'Farhan Kabir').length;
@@ -271,6 +309,46 @@ const PublicationPage: React.FC = () => {
               Showing cached stories
             </p>
           )}
+        </div>
+
+        {/* Category filter tabs */}
+        <div className="container mx-auto px-6 py-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium mr-2 flex-shrink-0">
+              Category:
+            </span>
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex-shrink-0 ${
+                categoryFilter === 'all'
+                  ? 'bg-slate-800 dark:bg-white text-white dark:text-slate-800 shadow-md'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              All Categories
+            </button>
+            {categoryStats.map(({ category, count }) => (
+              <button
+                key={category.id}
+                onClick={() => setCategoryFilter(category.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex-shrink-0 ${
+                  categoryFilter === category.id
+                    ? `bg-gradient-to-r ${category.gradient} text-white shadow-md`
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span>{category.emoji}</span>
+                <span>{category.name.split(' ')[0]}</span>
+                <span className={`text-xs px-1 py-0.5 rounded-full ${
+                  categoryFilter === category.id
+                    ? 'bg-white/20'
+                    : 'bg-slate-200 dark:bg-slate-700'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
