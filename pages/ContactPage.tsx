@@ -11,7 +11,7 @@ const ContactPage: React.FC = () => {
         // Simulate network request
         setTimeout(() => {
             setStatus('success');
-        }, 1500);
+        }, 2500);
     };
 
     return (

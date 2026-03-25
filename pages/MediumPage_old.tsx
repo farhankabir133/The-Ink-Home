@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useState as useStateForFiltered } from 'react';
 import MediumSearchBar from '../components/MediumSearchBar';
 import { useMediumFeed, MediumStory } from '../hooks/useMediumFeed';
 import { mediumArticles } from '../constants/mediumArticles';
@@ -18,31 +18,6 @@ function staticToMediumStory(a: typeof mediumArticles[0], _idx: number): MediumS
   };
 }
 
-// ── Extract primary category from tags ────────────────────────────────────────
-function getPrimaryCategory(tags: string[]): string {
-  if (!tags.length) return 'Uncategorized';
-  
-  const categoryKeywords: { [key: string]: string[] } = {
-    Love: ['love', 'relationship', 'heartbreak', 'emotional'],
-    'Self Improvement': ['self improvement', 'growth', 'habits', 'mindfulness', 'focus'],
-    AI: ['ai', 'artificial intelligence', 'machine learning', 'technology'],
-    Writing: ['writing', 'content creation', 'creativity', 'writing life'],
-    Psychology: ['psychology', 'mental health', 'adhd', 'brain health', 'kleptomania'],
-    'Human Rights': ['human rights', 'pakistan', 'accountability', 'public safety', 'fire safety', 'crime'],
-    'Life Lessons': ['life lessons', 'reflection', 'shakespeare', 'english literature', 'thinking'],
-  };
-
-  for (const [category, keywords] of Object.entries(categoryKeywords)) {
-    if (tags.some(tag => 
-      keywords.some(kw => tag.toLowerCase().includes(kw.toLowerCase()))
-    )) {
-      return category;
-    }
-  }
-
-  return tags[0] || 'Featured';
-}
-
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 const SkeletonCard: React.FC = () => (
   <div className="bg-white dark:bg-slate-800/50 rounded-2xl overflow-hidden">
@@ -60,7 +35,7 @@ const SkeletonCard: React.FC = () => (
   </div>
 );
 
-// ── Avatar ────────────────────────────────────────────────────────────────────
+// ── Author avatar ─────────────────────────────────────────────────────────────
 const Avatar: React.FC<{ name: string; size?: string }> = ({ name, size = 'w-8 h-8 text-xs' }) => (
   <div
     className={`${size} rounded-full bg-ink-accent flex items-center justify-center text-white font-bold flex-shrink-0`}
@@ -69,50 +44,19 @@ const Avatar: React.FC<{ name: string; size?: string }> = ({ name, size = 'w-8 h
   </div>
 );
 
-// ── Live dot ──────────────────────────────────────────────────────────────────
-const LiveDot: React.FC = () => (
-  <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
-    <span className="relative flex h-2 w-2">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-    </span>
-    Live
-  </span>
-);
-
-// ── Stat chip ─────────────────────────────────────────────────────────────────
-const StatChip: React.FC<{ value: string | number; label: string; delay: number }> = ({ value, label, delay }) => (
-  <div
-    className="flex flex-col items-center opacity-0 animate-countUp"
-    style={{ animationDelay: `${delay}ms` }}
-  >
-    <span className="stat-counter text-4xl md:text-5xl font-serif font-bold text-white leading-none">
-      {value}
-    </span>
-    <span className="text-xs text-slate-400 tracking-widest uppercase mt-1">{label}</span>
-  </div>
-);
-
-// ── Enhanced Story Card ───────────────────────────────────────────────────────
-const StoryCard: React.FC<{ story: MediumStory; idx: number; isFeatured?: boolean }> = ({ story, idx, isFeatured = false }) => {
+// ── Story card ────────────────────────────────────────────────────────────────
+const StoryCard: React.FC<{ story: MediumStory; idx: number }> = ({ story, idx }) => {
   const isEven = idx % 2 === 0;
   return (
     <a
       href={story.externalUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className={`glow-card group block bg-white dark:bg-slate-800/60 rounded-2xl overflow-hidden shadow-sm opacity-0 h-full flex flex-col transition-all duration-500 hover:shadow-2xl ${
+      className={`glow-card group block bg-white dark:bg-slate-800/60 rounded-2xl overflow-hidden shadow-sm opacity-0 h-full flex flex-col ${
         isEven ? 'animate-slideInLeft' : 'animate-slideInRight'
-      } ${isFeatured ? 'ring-2 ring-ink-accent/50' : ''}`}
+      }`}
       style={{ animationDelay: `${idx * 60}ms` }}
     >
-      {/* Featured badge */}
-      {isFeatured && (
-        <div className="absolute top-4 right-4 z-10 bg-ink-accent text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-bounceIn">
-          <span>⭐</span> Featured
-        </div>
-      )}
-
       {/* Cover image */}
       <div className="overflow-hidden h-52 flex-shrink-0 relative">
         <img
@@ -175,109 +119,29 @@ const StoryCard: React.FC<{ story: MediumStory; idx: number; isFeatured?: boolea
   );
 };
 
-// ── Category Flashcard Showcase ───────────────────────────────────────────────
-const CategoryShowcase: React.FC<{ 
-  category: string; 
-  stories: MediumStory[]; 
-  idx: number;
-}> = ({ category, stories, idx }) => {
-  const [expanded, setExpanded] = useState(false);
+// ── Live dot ──────────────────────────────────────────────────────────────────
+const LiveDot: React.FC = () => (
+  <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
+    <span className="relative flex h-2 w-2">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+    </span>
+    Live
+  </span>
+);
 
-  if (stories.length === 0) return null;
-
-  const categoryEmojis: { [key: string]: string } = {
-    Love: '💕',
-    'Self Improvement': '🚀',
-    AI: '🤖',
-    Writing: '✍️',
-    Psychology: '🧠',
-    'Human Rights': '✊',
-    'Life Lessons': '📖',
-    Featured: '⭐',
-    Uncategorized: '📝',
-  };
-
-  const categoryColors: { [key: string]: string } = {
-    Love: 'from-rose-500 to-pink-500',
-    'Self Improvement': 'from-blue-500 to-cyan-500',
-    AI: 'from-purple-500 to-indigo-500',
-    Writing: 'from-amber-500 to-orange-500',
-    Psychology: 'from-green-500 to-emerald-500',
-    'Human Rights': 'from-red-500 to-rose-500',
-    'Life Lessons': 'from-yellow-500 to-amber-500',
-    Featured: 'from-ink-accent to-amber-400',
-    Uncategorized: 'from-slate-500 to-slate-600',
-  };
-
-  const emoji = categoryEmojis[category] || '📚';
-  const gradient = categoryColors[category] || 'from-slate-500 to-slate-600';
-
-  return (
-    <div
-      className={`group opacity-0 animate-fadeInUp transition-all duration-500 ${
-        expanded ? 'sm:col-span-2' : ''
-      }`}
-      style={{ animationDelay: `${idx * 100}ms` }}
-    >
-      {/* Header Card */}
-      <div
-        onClick={() => setExpanded(!expanded)}
-        className={`relative overflow-hidden rounded-2xl p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl bg-gradient-to-br ${gradient} text-white min-h-[200px] flex flex-col justify-between`}
-      >
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)`
-          }} />
-        </div>
-
-        <div className="relative z-10">
-          <div className="text-4xl mb-3">{emoji}</div>
-          <h3 className="font-serif text-3xl font-bold mb-2">{category}</h3>
-          <p className="text-white/80 text-sm">
-            {stories.length} {stories.length === 1 ? 'story' : 'stories'}
-          </p>
-        </div>
-
-        {/* Expand indicator */}
-        <div className="relative z-10 flex items-center justify-between">
-          <span className="text-sm font-semibold opacity-80">
-            {expanded ? 'Collapse' : 'Explore'}
-          </span>
-          <svg
-            className={`w-5 h-5 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-
-        {/* Glow on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 70%)',
-          }}
-        />
-      </div>
-
-      {/* Expanded stories grid */}
-      {expanded && (
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6 animate-scaleReveal">
-          {stories.slice(0, 4).map((story, storyIdx) => (
-            <StoryCard
-              key={story.id}
-              story={story}
-              idx={storyIdx}
-              isFeatured={storyIdx === 0}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+// ── Stat chip ─────────────────────────────────────────────────────────────────
+const StatChip: React.FC<{ value: string | number; label: string; delay: number }> = ({ value, label, delay }) => (
+  <div
+    className="flex flex-col items-center opacity-0 animate-countUp"
+    style={{ animationDelay: `${delay}ms` }}
+  >
+    <span className="stat-counter text-4xl md:text-5xl font-serif font-bold text-white leading-none">
+      {value}
+    </span>
+    <span className="text-xs text-slate-400 tracking-widest uppercase mt-1">{label}</span>
+  </div>
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 const MediumPage: React.FC = () => {
@@ -287,22 +151,22 @@ const MediumPage: React.FC = () => {
   // Live RSS feed
   const { stories: liveStories, loading, error } = useMediumFeed();
 
-  // Merge live feed + older static stories
-  // Priority: live feed if available, otherwise static fallback
+  // Merge live feed + older static-only stories (dedup by externalUrl)
+  // When live feed works: show 10 live + up to 4 older archived stories = up to 14 total
+  // When offline/error: show all static (14 stories)
   const allStories: MediumStory[] = useMemo(() => {
-    // Always start with static stories as base
-    const staticStories = mediumArticles.map(staticToMediumStory);
-    
     if (liveStories.length > 0) {
-      // Live feed loaded: merge with static (live takes priority, dedup by title)
-      const liveTitles = new Set(liveStories.map(s => s.title.toLowerCase()));
-      const uniqueStatic = staticStories.filter(s => !liveTitles.has(s.title.toLowerCase()));
-      return [...liveStories, ...uniqueStatic];
+      // Live feed loaded: merge with older static-only stories not in live feed
+      const liveUrls = new Set(liveStories.map(s => s.externalUrl));
+      const olderStatic = mediumArticles
+        .map(staticToMediumStory)
+        .filter(s => !liveUrls.has(s.externalUrl));
+      return [...liveStories, ...olderStatic];
     }
-    
-    // No live stories (loading or error): use static fallback
-    return staticStories;
-  }, [liveStories]);
+    // Live feed failed/loading: fall back to static list
+    if (!loading) return mediumArticles.map(staticToMediumStory);
+    return [];
+  }, [liveStories, loading]);
 
   // Search / filter state
   const [filteredStories, setFilteredStories] = useState<MediumStory[]>([]);
@@ -310,35 +174,12 @@ const MediumPage: React.FC = () => {
     setFilteredStories(allStories);
   }, [allStories]);
 
-  // Group stories by category
-  const storiesByCategory = useMemo(() => {
-    const grouped: { [key: string]: MediumStory[] } = {};
-    
-    filteredStories.forEach(story => {
-      const category = getPrimaryCategory(story.tags);
-      if (!grouped[category]) {
-        grouped[category] = [];
-      }
-      grouped[category].push(story);
-    });
-
-    // Sort categories by story count (descending)
-    return Object.entries(grouped)
-      .sort(([, a], [, b]) => b.length - a.length)
-      .reduce((acc, [cat, stories]) => {
-        acc[cat] = stories;
-        return acc;
-      }, {} as { [key: string]: MediumStory[] });
-  }, [filteredStories]);
-
-  const displayedStories = filteredStories.length > 0 ? filteredStories : allStories;
-
-  // Featured story (newest)
-  const featuredStory = allStories[0];
+  const displayedStories =
+    filteredStories.length > 0 || allStories.length === 0 ? filteredStories : allStories;
 
   // Author spotlight counts
   const farhanCount = allStories.filter(s => s.author.toLowerCase().includes('farhan')).length;
-  const duaCount = allStories.filter(s => s.author.toLowerCase().includes('dua')).length;
+  const duaCount    = allStories.filter(s => s.author.toLowerCase().includes('dua')).length;
 
   if (!mounted) return null;
 
@@ -360,6 +201,7 @@ const MediumPage: React.FC = () => {
 
         <div className="relative container mx-auto px-6 py-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
+
             {/* Left — headline block */}
             <div className="space-y-6">
               <div className="opacity-0 animate-slideInLeft" style={{ animationDelay: '0ms' }}>
@@ -401,14 +243,14 @@ const MediumPage: React.FC = () => {
                 >
                   Open on Medium
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </a>
                 <a
-                  href="#categories"
+                  href="#stories"
                   className="inline-flex items-center gap-2 border border-slate-600 text-slate-300 hover:border-ink-accent hover:text-ink-accent px-6 py-3 rounded-full font-semibold text-sm transition-all duration-200"
                 >
-                  Explore categories
+                  Browse stories
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -441,93 +283,6 @@ const MediumPage: React.FC = () => {
         {/* Bottom accent bar */}
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ink-accent/40 to-transparent" />
       </section>
-
-      {/* ── FEATURED STORY HERO ──────────────────────────────────────────── */}
-      {featuredStory && (
-        <section className="container mx-auto px-6 py-16">
-          <div className="mb-6 opacity-0 animate-fadeInUp" style={{ animationDelay: '100ms' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-2xl">⭐</span>
-              <p className="text-xs font-bold tracking-widest uppercase text-ink-accent">
-                Featured Story
-              </p>
-            </div>
-            <h2 className="font-serif text-2xl font-bold text-slate-800 dark:text-slate-100">
-              Latest Highlight
-            </h2>
-          </div>
-
-          <div className="opacity-0 animate-scaleReveal" style={{ animationDelay: '150ms' }}>
-            <a
-              href={featuredStory.externalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="glow-card group flex flex-col sm:flex-row gap-6 bg-gradient-to-br from-ink-accent/10 to-amber-100/5 dark:from-ink-accent/5 dark:to-slate-800/50 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl border border-ink-accent/10 transition-all duration-500"
-            >
-              {/* Image */}
-              <div className="sm:w-1/3 overflow-hidden rounded-2xl h-64 sm:h-auto">
-                <img
-                  src={featuredStory.imageUrl}
-                  alt={featuredStory.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  loading="lazy"
-                  onError={e => {
-                    (e.target as HTMLImageElement).src =
-                      'https://cdn-images-1.medium.com/proxy/1*TGH72Nnw24QL3iV9IOm4VA.png';
-                  }}
-                />
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 p-6 sm:p-8 flex flex-col justify-between">
-                <div>
-                  {/* Tags */}
-                  {featuredStory.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {featuredStory.tags.slice(0, 3).map(t => (
-                        <span
-                          key={t}
-                          className="text-xs bg-ink-accent/20 text-ink-accent dark:bg-ink-accent/10 font-semibold px-3 py-1.5 rounded-full"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <h3 className="font-serif text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 mb-3 group-hover:text-ink-accent transition-colors duration-300">
-                    {featuredStory.title}
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base mb-6">
-                    {featuredStory.excerpt}
-                  </p>
-                </div>
-
-                {/* Footer */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={featuredStory.author} size="w-10 h-10 text-sm" />
-                    <div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">
-                        {featuredStory.author}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {featuredStory.date}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-ink-accent flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
-                    Read story
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </span>
-                </div>
-              </div>
-            </a>
-          </div>
-        </section>
-      )}
 
       {/* ── AUTHOR SPOTLIGHT ─────────────────────────────────────────────── */}
       <section className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800">
@@ -582,31 +337,37 @@ const MediumPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── CATEGORY SHOWCASES ───────────────────────────────────────────── */}
-      <section id="categories" className="container mx-auto px-6 py-16">
-        <div className="mb-12 opacity-0 animate-fadeInUp" style={{ animationDelay: '100ms' }}>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">📚</span>
-            <p className="text-xs font-bold tracking-widest uppercase text-ink-accent">
-              Stories By Category
+      {/* ── STORIES ──────────────────────────────────────────────────────── */}
+      <section id="stories" className="container mx-auto px-6 py-16">
+        {/* Section header */}
+        <div
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 opacity-0 animate-fadeInUp"
+          style={{ animationDelay: '100ms' }}
+        >
+          <div>
+            <p className="text-xs font-bold tracking-widest uppercase text-ink-accent mb-1">
+              Latest from Medium
             </p>
+            <h2 className="font-serif text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100">
+              All Stories
+            </h2>
           </div>
-          <h2 className="font-serif text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-            Explore All Stories
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 max-w-2xl">
-            Click on any category card to explore stories grouped by theme. Each category showcases the best of our writers' work.
-          </p>
+          {!loading && allStories.length > 0 && (
+            <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <LiveDot />
+              {allStories.length} stories loaded
+            </span>
+          )}
         </div>
 
         {/* Search bar */}
         {!loading && allStories.length > 0 && (
-          <div className="mb-10 opacity-0 animate-fadeInUp" style={{ animationDelay: '200ms' }}>
+          <div className="mb-8 opacity-0 animate-fadeInUp" style={{ animationDelay: '200ms' }}>
             <MediumSearchBar stories={allStories} onFiltered={setFilteredStories} />
           </div>
         )}
 
-        {/* Error notice */}
+        {/* Error / fallback notice */}
         {error && (
           <div
             className="mb-8 flex items-start gap-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-xl px-5 py-4 max-w-3xl opacity-0 animate-fadeInUp"
@@ -621,12 +382,12 @@ const MediumPage: React.FC = () => {
           </div>
         )}
 
-        {/* Category grid */}
+        {/* Story grid */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
-        ) : Object.keys(storiesByCategory).length === 0 ? (
+        ) : displayedStories.length === 0 ? (
           <div className="text-center py-20 opacity-0 animate-fadeInUp">
             <p className="text-5xl mb-4">🔍</p>
             <h3 className="font-serif text-2xl font-bold text-slate-700 dark:text-slate-300 mb-2">
@@ -637,14 +398,9 @@ const MediumPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {Object.entries(storiesByCategory).map(([category, stories], idx) => (
-              <CategoryShowcase
-                key={category}
-                category={category}
-                stories={stories}
-                idx={idx}
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayedStories.map((story, idx) => (
+              <StoryCard key={story.id} story={story} idx={idx} />
             ))}
           </div>
         )}
@@ -683,7 +439,7 @@ const MediumPage: React.FC = () => {
           >
             Follow on Medium
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
           </a>
         </div>

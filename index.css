@@ -1,18 +1,76 @@
-/* Minimal global styles required by the app - created to satisfy import in index.tsx */
+/* ========================================
+   HYPER-REALISTIC "DIGITAL WRITING DESK" 
+   The Ink Home - Enhanced CSS
+   ======================================== */
+
 :root{
+  /* Modern Light Mode */
   --bg: #ffffff;
   --text: #0f1720;
+  
+  /* Book Mode (Sepia) - Hyper-Realistic Paper */
+  --book-bg: #f4ecd8;
+  --book-text: #5b4636;
+  --book-accent: #8b7355;
+  --book-border: #d4c4a8;
+  
+  /* Reading Progress Bar */
+  --progress-bg: rgba(163, 139, 119, 0.2);
+  --progress-fill: #a38b77;
 }
 
 *,*::before,*::after{box-sizing:border-box}
 html,body,#root{height:100%}
+
 body{
   margin:0;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-family: 'Libre Baskerville', 'Playfair Display', Georgia, serif;
   background:var(--bg);
   color:var(--text);
+  line-height: 1.6;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
+  
+  /* Organic Paper Texture using CSS */
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: 
+    radial-gradient(circle at 20% 50%, transparent 0%, rgba(0,0,0,0.05) 100%),
+    radial-gradient(circle at 80% 80%, transparent 0%, rgba(0,0,0,0.03) 100%),
+    radial-gradient(circle at 40% 20%, transparent 0%, rgba(0,0,0,0.02) 100%);
+  background-size: 
+    200px 200px,
+    150px 150px,
+    100px 100px;
+  background-position: 
+    0 0,
+    50px 50px,
+    100px 100px;
+  mix-blend-mode: multiply;
+}
+
+/* Book Mode Enhancement */
+body.book-mode {
+  background: var(--book-bg);
+  color: var(--book-text);
+}
+
+body.book-mode::before {
+  opacity: 0.06;
+  background-image: 
+    radial-gradient(circle at 20% 50%, transparent 0%, rgba(91, 70, 54, 0.08) 100%),
+    radial-gradient(circle at 80% 80%, transparent 0%, rgba(91, 70, 54, 0.05) 100%);
 }
 
 /* Basic link and image defaults */
@@ -22,4 +80,350 @@ img{max-width:100%;display:block}
 /* Utility container used by pages */
 .container{width:100%;max-width:1200px;margin:0 auto;padding:0 1rem}
 
-/* Add any additional global styles below */
+/* ========================================
+   MODERN VIEWPORT ANIMATIONS (ENHANCED)
+   ======================================== */
+
+/* Primary Fade-In Up with smooth deceleration */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Elegant scale reveal */
+@keyframes scaleReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Smooth slide from left */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Smooth slide from right */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Bounce entrance for emphasis */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Rotate and fade for special elements */
+@keyframes rotateInFade {
+  from {
+    opacity: 0;
+    transform: rotate(-12deg) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+/* Soft blur entrance */
+@keyframes blurIn {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.article-card-animated {
+  animation: fadeInUp 0.7s cubic-bezier(0.23, 1, 0.320, 1) forwards;
+  opacity: 0;
+}
+
+/* Stagger effect for multiple cards - optimized timing */
+.article-card-animated:nth-child(1) { animation-delay: 0.05s; }
+.article-card-animated:nth-child(2) { animation-delay: 0.15s; }
+.article-card-animated:nth-child(3) { animation-delay: 0.25s; }
+.article-card-animated:nth-child(4) { animation-delay: 0.35s; }
+.article-card-animated:nth-child(5) { animation-delay: 0.45s; }
+.article-card-animated:nth-child(6) { animation-delay: 0.55s; }
+
+/* ========================================
+   READING PROGRESS BAR
+   ======================================== */
+
+#reading-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: var(--progress-bg);
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#reading-progress-bar.visible {
+  opacity: 1;
+}
+
+#reading-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--progress-fill), #c4a676);
+  width: 0%;
+  transition: width 0.15s ease-out;
+  box-shadow: 0 0 10px rgba(163, 139, 119, 0.5);
+}
+
+/* ========================================
+   READING TIME BADGE
+   ======================================== */
+
+.reading-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  background: rgba(163, 139, 119, 0.1);
+  border: 1px solid rgba(163, 139, 119, 0.3);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  color: var(--book-accent);
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+}
+
+.reading-time::before {
+  content: '📖';
+  font-size: 1rem;
+}
+
+/* ========================================
+   ENHANCED TYPOGRAPHY
+   ======================================== */
+
+.prose-enhanced {
+  font-family: 'Libre Baskerville', 'Playfair Display', Georgia, serif;
+  line-height: 1.8;
+  font-size: 1.125rem;
+  color: var(--text);
+}
+
+.prose-enhanced p {
+  margin-bottom: 1.5rem;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.prose-enhanced h1,
+.prose-enhanced h2,
+.prose-enhanced h3 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+body.book-mode .prose-enhanced {
+  color: var(--book-text);
+}
+
+/* ========================================
+   SEARCH NO RESULTS MESSAGE
+   ======================================== */
+
+.no-results-message {
+  text-align: center;
+  padding: 4rem 2rem;
+  font-family: 'Playfair Display', serif;
+  color: var(--book-accent);
+  font-size: 1.5rem;
+  opacity: 0;
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.no-results-message::before {
+  content: '🔍';
+  display: block;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+/* ── MediumPage modern animation utilities ───────────────────────────── */
+
+/* Glow card with smooth elevation and gradient shadow */
+.glow-card {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(163,139,119,0.15) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.16,1,0.3,1);
+  pointer-events: none;
+}
+
+.glow-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 0 0 1px rgba(163,139,119,0.3),
+              0 20px 50px -10px rgba(163,139,119,0.5),
+              0 0 40px 4px rgba(163,139,119,0.2),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.glow-card:hover::before {
+  opacity: 1;
+}
+
+.glow-card img {
+  transition: transform 0.5s cubic-bezier(0.16,1,0.3,1), filter 0.35s ease-out;
+}
+
+.glow-card:hover img {
+  transform: scale(1.08);
+  filter: brightness(1.1);
+}
+
+/* Text reveal animation */
+.text-reveal {
+  overflow: hidden;
+  display: inline-block;
+  position: relative;
+}
+
+.text-reveal::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(163,139,119,0.8), transparent);
+  animation: slideReveal 0.6s ease-out forwards;
+}
+
+@keyframes slideReveal {
+  from { transform: scaleX(0); transform-origin: left; }
+  to { transform: scaleX(1); transform-origin: left; }
+}
+
+.stat-counter {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.02em;
+}
+
+/* Enhanced staggered entrance for cards - 12 items */
+.stagger-children > * {
+  animation: fadeInUp 0.6s cubic-bezier(0.23, 1, 0.320, 1) forwards;
+  opacity: 0;
+}
+
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 480ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 540ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 600ms; }
+.stagger-children > *:nth-child(12) { animation-delay: 660ms; }
+
+/* Enhanced shimmer with directional flow */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.ticker-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(163,139,119,0.08) 0%,
+    rgba(163,139,119,0.3) 50%,
+    rgba(163,139,119,0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+  position: relative;
+}
+
+.ticker-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 2.5s linear infinite;
+  pointer-events: none;
+}
+
+/* Skeleton shimmer for loading states - enhanced */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 0%,
+    #f1f5f9 50%,
+    #e2e8f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  border-radius: 0.5rem;
+}
+
+body.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #334155 0%,
+    #475569 50%,
+    #334155 100%
+  );
+}
