@@ -18,6 +18,9 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           alt={article.title} 
           className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
           loading="lazy"
+          decoding="async"
+          width={1200}
+          height={675}
         />
       </div>
       <div className="p-6 flex flex-col flex-grow">

@@ -1,4 +1,5 @@
 import React from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const editors = [
     { name: 'Farhan Kabir', role: 'Founder & Editor-in-Chief', imageUrl: 'https://images.pexels.com/photos/34067041/pexels-photo-34067041.png' },
@@ -6,6 +7,12 @@ const editors = [
 ];
 
 const AboutPage: React.FC = () => {
+    usePageMeta({
+        title: 'About',
+        description: 'Learn about The Ink Home, our editorial philosophy, and the people behind the publication.',
+        pathname: '/about',
+    });
+
     return (
         <div className="opacity-0 animate-fadeInUp">
             <div className="bg-slate-50 dark:bg-gray-900/50 py-24 px-6 transition-colors duration-500">

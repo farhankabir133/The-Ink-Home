@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useDarkMode } from '../hooks/useDarkMode';
+import { useDarkMode, type ThemePreference, type ResolvedTheme } from '../hooks/useDarkMode';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS
@@ -18,6 +18,19 @@ const MoonIcon = () => (
     </svg>
 );
 
+const InkIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 014-4h0a4 4 0 014 4v2H7v-2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3s4 3.6 4 7a4 4 0 11-8 0c0-3.4 4-7 4-7z" />
+    </svg>
+);
+
+const AutoIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3a6.75 6.75 0 104.5 12.3A7.5 7.5 0 1018 3.5a5.75 5.75 0 01-8.25-.5z" />
+    </svg>
+);
+
 // Animated feather quill icon for branding
 const QuillIcon = () => (
     <svg className="w-7 h-7 text-ink-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -28,10 +41,10 @@ const QuillIcon = () => (
 );
 
 const socialLinks = [
-    { name: 'Twitter', href: 'https://twitter.com', icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
-    { name: 'Medium', href: 'https://medium.com/the-ink-home', icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/></svg> },
-    { name: 'GitHub', href: 'https://github.com/farhankabir133', icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.164 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" /></svg> },
-    { name: 'LinkedIn', href: 'https://linkedin.com', icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> },
+    { name: 'Twitter', href: 'https://twitter.com', icon: <span className="text-[10px] font-bold tracking-wide">X</span> },
+    { name: 'Medium', href: 'https://medium.com/the-ink-home', icon: <span className="text-[10px] font-bold tracking-wide">M</span> },
+    { name: 'GitHub', href: 'https://github.com/farhankabir133', icon: <span className="text-[10px] font-bold tracking-wide">GH</span> },
+    { name: 'LinkedIn', href: 'https://linkedin.com', icon: <span className="text-[10px] font-bold tracking-wide">in</span> },
 ];
 
 const navItems = [
@@ -60,7 +73,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, onClick }) => {
         <NavLink
             to={to}
             onClick={onClick}
-            className="group relative px-4 py-2 font-medium text-sm tracking-wide uppercase"
+            className="interactive-lift group relative px-4 py-2 font-medium text-sm tracking-wide uppercase"
         >
             {/* Text with hover effect */}
             <span className={`relative z-10 transition-colors duration-300 ${
@@ -91,13 +104,16 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, onClick }) => {
 interface HamburgerProps {
     isOpen: boolean;
     toggle: () => void;
+    controlsId: string;
 }
 
-const Hamburger: React.FC<HamburgerProps> = ({ isOpen, toggle }) => (
+const Hamburger: React.FC<HamburgerProps> = ({ isOpen, toggle, controlsId }) => (
     <button
         onClick={toggle}
-        className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ink-accent/50"
+    className="interactive-lift relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ink-accent/50"
         aria-label="Toggle menu"
+        aria-expanded={isOpen}
+        aria-controls={controlsId}
     >
         <div className="w-5 h-4 flex flex-col justify-between">
             <span className={`block h-0.5 bg-slate-700 dark:bg-slate-200 rounded-full transform transition-all duration-300 origin-center ${isOpen ? 'rotate-45 translate-y-[7px]' : ''}`} />
@@ -122,7 +138,7 @@ const SocialLink: React.FC<SocialLinkProps> = ({ href, icon, name }) => (
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="group relative p-2.5 rounded-full bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:text-ink-accent hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 hover:scale-110"
+    className="interactive-lift group relative p-2.5 rounded-full bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:text-ink-accent hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 hover:scale-110"
         aria-label={name}
     >
         <span className="relative z-10">{icon}</span>
@@ -138,39 +154,54 @@ const SocialLink: React.FC<SocialLinkProps> = ({ href, icon, name }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ThemeToggleProps {
-    theme: string;
-    toggleTheme: () => void;
+    themePreference: ThemePreference;
+    resolvedTheme: ResolvedTheme;
+    cycleTheme: () => void;
 }
 
-const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, toggleTheme }) => (
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ themePreference, resolvedTheme, cycleTheme }) => {
+    const modeLabel = themePreference.charAt(0).toUpperCase() + themePreference.slice(1);
+
+    const icon = themePreference === 'auto'
+        ? <AutoIcon />
+        : themePreference === 'ink'
+        ? <InkIcon />
+        : resolvedTheme === 'dark'
+        ? <MoonIcon />
+        : <SunIcon />;
+
+    return (
     <button
-        onClick={toggleTheme}
-        className="relative p-2.5 rounded-full bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:text-ink-accent hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 hover:scale-110 hover:rotate-12"
-        aria-label="Toggle theme"
+        onClick={cycleTheme}
+    className="interactive-lift relative p-2.5 rounded-full bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:text-ink-accent hover:bg-ink-accent/10 dark:hover:bg-ink-accent/20 transition-all duration-300 hover:scale-110 hover:rotate-12"
+        aria-label={`Theme mode: ${modeLabel}. Activate to cycle mode.`}
+        title={`Theme: ${modeLabel}`}
     >
-        <div className="relative w-5 h-5">
-            {/* Sun icon */}
-            <span className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${theme === 'dark' ? 'opacity-100 rotate-0' : 'opacity-0 rotate-90'}`}>
-                <SunIcon />
-            </span>
-            {/* Moon icon */}
-            <span className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${theme === 'light' ? 'opacity-100 rotate-0' : 'opacity-0 -rotate-90'}`}>
-                <MoonIcon />
+        <div className="relative w-5 h-5 flex items-center justify-center">
+            <span className="absolute inset-0 flex items-center justify-center transition-all duration-300 opacity-100 rotate-0">
+                {icon}
             </span>
         </div>
+
+        <span className="absolute -bottom-1.5 -right-1.5 rounded-full bg-ink-accent px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+            {themePreference === 'auto' ? 'A' : themePreference.charAt(0)}
+        </span>
     </button>
 );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN HEADER COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Header: React.FC = () => {
-    const [theme, toggleTheme] = useDarkMode();
+    const { pathname } = useLocation();
+    const { themePreference, resolvedTheme, cycleTheme } = useDarkMode();
     const [isSticky, setSticky] = useState(false);
     const [isMenuOpen, setMenuOpen] = useState(false);
     const [scrollProgress, setScrollProgress] = useState(0);
     const headerRef = useRef<HTMLElement>(null);
+    const mobileMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -190,7 +221,45 @@ const Header: React.FC = () => {
     // Close menu on route change
     useEffect(() => {
         setMenuOpen(false);
-    }, []);
+    }, [pathname]);
+
+    // Escape key + focus trap for mobile menu
+    useEffect(() => {
+        if (!isMenuOpen) return;
+
+        const menuEl = mobileMenuRef.current;
+        if (!menuEl) return;
+
+        const focusable = menuEl.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        first?.focus();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setMenuOpen(false);
+                return;
+            }
+
+            if (e.key !== 'Tab' || focusable.length === 0) return;
+
+            const active = document.activeElement as HTMLElement | null;
+            if (e.shiftKey && active === first) {
+                e.preventDefault();
+                last?.focus();
+            } else if (!e.shiftKey && active === last) {
+                e.preventDefault();
+                first?.focus();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isMenuOpen]);
 
     // Prevent body scroll when menu is open
     useEffect(() => {
@@ -265,13 +334,17 @@ const Header: React.FC = () => {
                         <div className="mx-4 h-8 w-px bg-gradient-to-b from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
 
                         {/* Theme Toggle */}
-                        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+                        <ThemeToggle themePreference={themePreference} resolvedTheme={resolvedTheme} cycleTheme={cycleTheme} />
                     </div>
 
                     {/* ─── Mobile Controls ─── */}
                     <div className="lg:hidden flex items-center gap-3">
-                        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-                        <Hamburger isOpen={isMenuOpen} toggle={() => setMenuOpen(!isMenuOpen)} />
+                        <ThemeToggle themePreference={themePreference} resolvedTheme={resolvedTheme} cycleTheme={cycleTheme} />
+                        <Hamburger
+                            isOpen={isMenuOpen}
+                            toggle={() => setMenuOpen(!isMenuOpen)}
+                            controlsId="mobile-menu-panel"
+                        />
                     </div>
                 </nav>
             </header>
@@ -290,6 +363,11 @@ const Header: React.FC = () => {
                 
                 {/* Menu Panel */}
                 <div 
+                    id="mobile-menu-panel"
+                    ref={mobileMenuRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Mobile navigation menu"
                     className={`absolute top-0 right-0 w-full max-w-sm h-full bg-white dark:bg-ink-dark shadow-2xl transform transition-transform duration-500 ease-out ${
                         isMenuOpen ? 'translate-x-0' : 'translate-x-full'
                     }`}
@@ -299,7 +377,7 @@ const Header: React.FC = () => {
                         <span className="text-lg font-serif font-bold text-slate-800 dark:text-slate-100">Menu</span>
                         <button
                             onClick={() => setMenuOpen(false)}
-                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            className="interactive-lift p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         >
                             <svg className="w-5 h-5 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

@@ -30,6 +30,13 @@ export interface UseMediumFeedResult {
   error: string | null;
 }
 
+interface MediumFeedCachePayload {
+  generatedAt: string;
+  source: string;
+  total: number;
+  stories: MediumStory[];
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Upgrade a cdn-images-1.medium.com URL to a 1200-wide v2 URL (no redirect). */
@@ -94,8 +101,8 @@ function parseItems(xml: string): MediumStory[] {
     const link    = raw.match(/<link>([^<\s]+)/)?.[1]?.trim() ?? '';
     const guid    = raw.match(/<guid[^>]*>([^<]+)/)?.[1]?.trim() ?? link;
     const pubDate = raw.match(/<pubDate>([^<]+)/)?.[1]?.trim() ?? '';
-    const author  = raw.match(/<dc:creator><!\[CDATA\[([^\]]+)\]\]>/)?.[1]?.trim()
-                 ?? 'The Ink Home';
+  const author  = raw.match(/<dc:creator><!\[CDATA\[([^\]]+)\]\]>/)?.[1]?.trim()
+         || 'The Ink Home';
 
     // content:encoded has the full post HTML with the featured image
     const content = raw.match(/<content:encoded><!\[CDATA\[([\s\S]*?)\]\]>/)?.[1] ?? '';
@@ -129,6 +136,7 @@ const CORS_PROXIES = [
   'https://api.codetabs.com/v1/proxy?quest=',
 ];
 const MEDIUM_FEED = 'https://medium.com/feed/the-ink-home';
+const LOCAL_FEED_CACHE = `${import.meta.env.BASE_URL}data/medium-feed.json`;
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -139,6 +147,26 @@ export function useMediumFeed(): UseMediumFeedResult {
 
   useEffect(() => {
     let cancelled = false;
+
+    async function loadFromCache(): Promise<MediumStory[] | null> {
+      try {
+        const res = await fetch(LOCAL_FEED_CACHE, {
+          signal: AbortSignal.timeout(6000),
+          cache: 'no-store',
+        });
+
+        if (!res.ok) return null;
+
+        const payload = (await res.json()) as MediumFeedCachePayload;
+        if (!Array.isArray(payload.stories) || payload.stories.length === 0) {
+          return null;
+        }
+
+        return payload.stories.filter(story => Boolean(story?.title && story?.externalUrl));
+      } catch {
+        return null;
+      }
+    }
 
     async function tryProxy(proxyUrl: string): Promise<string> {
       const url = proxyUrl.includes('allorigins') 
@@ -162,6 +190,18 @@ export function useMediumFeed(): UseMediumFeedResult {
     }
 
     async function fetchFeed() {
+      // First try local, pre-built cache generated via automation.
+      const cachedStories = await loadFromCache();
+      if (cachedStories && cachedStories.length > 0) {
+        if (!cancelled) {
+          setStories(cachedStories);
+          setError(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // Cache unavailable: fall back to client-side proxy strategy.
       let lastError: Error | null = null;
 
       // Try each CORS proxy
@@ -220,7 +260,7 @@ export function useMediumFeed(): UseMediumFeedResult {
 
       // All feeds failed - set error state (pages will use static fallback)
       if (!cancelled) {
-        setError(lastError?.message || 'Feed unavailable');
+        setError(lastError?.message || 'Cached feed unavailable');
         setLoading(false);
       }
     }

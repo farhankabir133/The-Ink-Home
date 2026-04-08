@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import MediumSearchBar from '../components/MediumSearchBar';
 import { useMediumFeed, MediumStory } from '../hooks/useMediumFeed';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { mediumArticles } from '../constants/mediumArticles';
 
 // ── Convert static fallback to MediumStory ────────────────────────────────────
@@ -101,7 +102,7 @@ const StoryCard: React.FC<{ story: MediumStory; idx: number; isFeatured?: boolea
       href={story.externalUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className={`glow-card group block bg-white dark:bg-slate-800/60 rounded-2xl overflow-hidden shadow-sm opacity-0 h-full flex flex-col transition-all duration-500 hover:shadow-2xl ${
+      className={`interactive-lift glow-card group block bg-white dark:bg-slate-800/60 rounded-2xl overflow-hidden shadow-sm opacity-0 h-full flex flex-col transition-all duration-500 hover:shadow-2xl ${
         isEven ? 'animate-slideInLeft' : 'animate-slideInRight'
       } ${isFeatured ? 'ring-2 ring-ink-accent/50' : ''}`}
       style={{ animationDelay: `${idx * 60}ms` }}
@@ -120,6 +121,9 @@ const StoryCard: React.FC<{ story: MediumStory; idx: number; isFeatured?: boolea
           alt={story.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           loading="lazy"
+          decoding="async"
+          width={1200}
+          height={675}
           onError={e => {
             (e.target as HTMLImageElement).src =
               'https://cdn-images-1.medium.com/proxy/1*TGH72Nnw24QL3iV9IOm4VA.png';
@@ -220,9 +224,11 @@ const CategoryShowcase: React.FC<{
       style={{ animationDelay: `${idx * 100}ms` }}
     >
       {/* Header Card */}
-      <div
+      <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
-        className={`relative overflow-hidden rounded-2xl p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl bg-gradient-to-br ${gradient} text-white min-h-[200px] flex flex-col justify-between`}
+        aria-expanded={expanded}
+        className={`interactive-lift relative w-full overflow-hidden rounded-2xl p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl bg-gradient-to-br ${gradient} text-white min-h-[200px] flex flex-col justify-between`}
       >
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
@@ -260,7 +266,7 @@ const CategoryShowcase: React.FC<{
             background: 'radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 70%)',
           }}
         />
-      </div>
+  </button>
 
       {/* Expanded stories grid */}
       {expanded && (
@@ -283,6 +289,12 @@ const CategoryShowcase: React.FC<{
 const MediumPage: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  usePageMeta({
+    title: 'Medium Stories',
+    description: 'Read the latest Medium stories from The Ink Home, with searchable categories and featured writing.',
+    pathname: '/medium',
+  });
 
   // Live RSS feed
   const { stories: liveStories, loading, error } = useMediumFeed();

@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ========================================
    HYPER-REALISTIC "DIGITAL WRITING DESK" 
    The Ink Home - Enhanced CSS
@@ -73,9 +77,87 @@ body.book-mode::before {
     radial-gradient(circle at 80% 80%, transparent 0%, rgba(91, 70, 54, 0.05) 100%);
 }
 
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition-property: background-color, color, border-color, box-shadow;
+  transition-duration: 220ms;
+  transition-timing-function: ease;
+}
+
 /* Basic link and image defaults */
 a{color:inherit;text-decoration:none}
 img{max-width:100%;display:block}
+
+.skip-link {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(163, 139, 119, 0.95);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+.interactive-lift {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, background-color 220ms ease;
+  will-change: transform;
+}
+
+.interactive-lift:hover,
+.interactive-lift:focus-visible {
+  transform: translateY(-2px);
+}
+
+.interactive-cta {
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease;
+}
+
+.interactive-cta:hover,
+.interactive-cta:focus-visible {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 10px 24px -14px rgba(163, 139, 119, 0.7);
+}
+
+.route-transition-shell {
+  will-change: opacity, transform;
+}
+
+@keyframes routeEnterForward {
+  from {
+    opacity: 0;
+    transform: translate3d(16px, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes routeEnterBackward {
+  from {
+    opacity: 0;
+    transform: translate3d(-16px, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.route-enter-forward {
+  animation: routeEnterForward 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.route-enter-backward {
+  animation: routeEnterBackward 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
 
 /* Utility container used by pages */
 .container{width:100%;max-width:1200px;margin:0 auto;padding:0 1rem}
@@ -426,4 +508,62 @@ body.dark .skeleton-shimmer {
     #475569 50%,
     #334155 100%
   );
+}
+
+/* ========================================
+   MOTION SAFETY + MOBILE PERFORMANCE
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-marquee,
+  .animate-ping,
+  .animate-pulse,
+  .animate-glowPulse,
+  .ticker-bar,
+  .ticker-bar::after,
+  .skeleton-shimmer {
+    animation: none !important;
+  }
+
+  .interactive-lift,
+  .interactive-cta,
+  .interactive-lift:hover,
+  .interactive-lift:focus-visible,
+  .interactive-cta:hover,
+  .interactive-cta:focus-visible {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  body::before {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* soften heavy always-on animation loops on mobile */
+  .animate-marquee {
+    animation-duration: 60s !important;
+  }
+
+  .ticker-bar,
+  .ticker-bar::after,
+  .skeleton-shimmer {
+    animation-duration: 3.2s !important;
+  }
+
+  body::before {
+    opacity: 0.015;
+  }
+
+  .glow-card:hover {
+    transform: none;
+  }
 }

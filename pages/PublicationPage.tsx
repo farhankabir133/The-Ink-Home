@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import MediumSearchBar from '../components/MediumSearchBar';
 import { useMediumFeed, MediumStory } from '../hooks/useMediumFeed';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { mediumArticles } from '../constants/mediumArticles';
 import {
   CATEGORIES,
@@ -42,7 +43,7 @@ const StoryCard: React.FC<{ story: MediumStory; idx: number }> = ({ story, idx }
       href={story.externalUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block bg-white dark:bg-slate-800/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 opacity-0 animate-fadeInUp h-full flex flex-col"
+      className="interactive-lift group block bg-white dark:bg-slate-800/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 opacity-0 animate-fadeInUp h-full flex flex-col"
       style={{ animationDelay: `${idx * 80}ms` }}
     >
       {/* Cover image */}
@@ -52,6 +53,9 @@ const StoryCard: React.FC<{ story: MediumStory; idx: number }> = ({ story, idx }
           alt={story.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
+          decoding="async"
+          width={1200}
+          height={675}
           onError={e => {
             (e.target as HTMLImageElement).src =
               'https://cdn-images-1.medium.com/proxy/1*TGH72Nnw24QL3iV9IOm4VA.png';
@@ -133,6 +137,12 @@ function staticToMediumStory(a: typeof mediumArticles[0], idx: number): MediumSt
 const PublicationPage: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  usePageMeta({
+    title: 'Publication',
+    description: 'Browse curated stories from The Ink Home publication, including featured essays and reflective writing.',
+    pathname: '/publication',
+  });
 
   // Live RSS feed
   const { stories: liveStories, loading, error } = useMediumFeed();

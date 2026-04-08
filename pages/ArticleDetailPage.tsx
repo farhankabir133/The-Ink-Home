@@ -2,10 +2,20 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { articles } from '../constants/articles';
 import { useReadingTime, formatReadingTime } from '../hooks/useReadingTime';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const ArticleDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const article = articles.find(a => a.id === parseInt(id || ''));
+
+    usePageMeta({
+        title: article ? article.title : 'Article Not Found',
+        description: article
+            ? article.excerpt
+            : 'The requested article could not be found in The Ink Home publication archive.',
+        pathname: article ? `/publication/${article.id}` : '/publication',
+        image: article?.imageUrl,
+    });
     
     // Calculate reading time
     const readingTimeMinutes = useReadingTime(article?.content || '');
@@ -16,7 +26,7 @@ const ArticleDetailPage: React.FC = () => {
             <div className="container mx-auto px-6 py-16 text-center animate-fadeInUp">
                 <h1 className="text-4xl font-serif font-bold">Article not found</h1>
                 <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">The story you're looking for doesn't exist or has been moved.</p>
-                <Link to="/publication" className="mt-8 inline-block bg-ink-accent text-white px-6 py-3 rounded-md hover:bg-opacity-90 transition-transform active:scale-95 font-semibold">
+                <Link to="/publication" className="interactive-cta mt-8 inline-block bg-ink-accent text-white px-6 py-3 rounded-md hover:bg-opacity-90 transition-transform active:scale-95 font-semibold">
                     Browse All Articles
                 </Link>
             </div>

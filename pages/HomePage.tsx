@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ArticleCard from '../components/ArticleCard';
 import { useMediumFeed, MediumStory } from '../hooks/useMediumFeed';
+import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
+import { usePageMeta } from '../hooks/usePageMeta';
 import {
   heroStory as staticHero,
   featuredStories as staticFeatured,
@@ -35,6 +37,73 @@ function toArticle(s: MediumStory, idx: number): Article {
   };
 }
 
+/** Build responsive srcset candidates for Medium CDN images when possible. */
+function getMediumSrcSet(url: string): string | undefined {
+  if (!url.includes('cdn-images-1.medium.com')) return undefined;
+
+  const variants = [480, 768, 1200];
+  const srcSet = variants
+    .map(width => {
+      const candidate = url.replace(
+        /\/v2\/resize:[^/]+\//,
+        `/v2/resize:fit:${width}/`,
+      );
+      return `${candidate} ${width}w`;
+    })
+    .join(', ');
+
+  return srcSet;
+}
+
+interface RevealOnScrollProps {
+  children: React.ReactNode;
+  delay?: number;
+  threshold?: number;
+  className?: string;
+}
+
+interface ReadingSnapshot {
+  title: string;
+  tags: string[];
+  author: string;
+  date: string;
+  excerpt: string;
+  imageUrl: string;
+  externalUrl?: string;
+}
+
+function estimateReadMinutes(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+function getTagAffinityScore(baseTags: string[], candidateTags: string[], featured: boolean): number {
+  const overlaps = candidateTags.filter(tag =>
+    baseTags.some(base => base.toLowerCase() === tag.toLowerCase())
+  ).length;
+
+  return overlaps * 4 + (featured ? 1 : 0);
+}
+
+const RevealOnScroll: React.FC<RevealOnScrollProps> = ({
+  children,
+  delay = 0,
+  threshold = 0.2,
+  className = '',
+}) => {
+  const [ref, isVisible] = useIntersectionObserver({ threshold, triggerOnce: true });
+
+  return (
+    <div
+      ref={ref}
+      className={`${className} ${isVisible ? 'opacity-100 animate-fadeInUp' : 'opacity-0'}`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+};
+
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 const SkeletonCard: React.FC = () => (
   <div className="bg-white dark:bg-slate-800/50 rounded-xl overflow-hidden shadow-sm animate-pulse h-full">
@@ -64,20 +133,25 @@ interface CategoryCardProps {
 }
 
 const CategoryCard: React.FC<CategoryCardProps> = ({ categoryData, count, idx, onClick }) => {
+  const [ref, isVisible] = useIntersectionObserver({ threshold: 0.2, triggerOnce: true });
+
   return (
-    <button
-      onClick={onClick}
-      className={`
-        group relative overflow-hidden rounded-2xl p-6 text-left
-        bg-gradient-to-br ${categoryData.gradient}
-        transform hover:scale-[1.03] hover:-translate-y-1
-        transition-all duration-500 ease-out
-        shadow-lg hover:shadow-2xl
-        opacity-0 animate-fadeInUp
-        cursor-pointer
-      `}
+    <div
+      ref={ref}
+      className={isVisible ? 'opacity-100 animate-fadeInUp' : 'opacity-0'}
       style={{ animationDelay: `${idx * 80}ms` }}
     >
+      <button
+        onClick={onClick}
+        className={`
+          group relative overflow-hidden rounded-2xl p-6 text-left w-full
+          bg-gradient-to-br ${categoryData.gradient}
+          transform hover:scale-[1.03] hover:-translate-y-1
+          transition-all duration-500 ease-out
+          shadow-lg hover:shadow-2xl
+          cursor-pointer
+        `}
+      >
       {/* Animated background shimmer */}
       <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-out" />
       
@@ -107,15 +181,23 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ categoryData, count, idx, o
           </span>
         </div>
       </div>
-    </button>
+      </button>
+    </div>
   );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 const HomePage: React.FC = () => {
   const [mounted, setMounted] = useState(false);
+  const [lastRead, setLastRead] = useState<ReadingSnapshot | null>(null);
   const navigate = useNavigate();
   useEffect(() => setMounted(true), []);
+
+  usePageMeta({
+    title: 'Home',
+    description: 'Discover thoughtful essays, reflections, and human stories from The Ink Home publication.',
+    pathname: '/',
+  });
 
   // ── Live RSS feed ──────────────────────────────────────────────────────────
   const { stories: liveStories, loading, error } = useMediumFeed();
@@ -155,6 +237,78 @@ const HomePage: React.FC = () => {
     ? staticArticles.filter(a => !a.featured).slice(0, 4)
     : stories.filter(s => !s.featured).slice(0, 4).map(toArticle);
 
+  const analyticsStories = galleryData.length > 0 ? galleryData : featuredData;
+
+  const readingInsights = (() => {
+    const totalStories = analyticsStories.length;
+    if (totalStories === 0) {
+      return { averageReadMins: 0, topicDensity: 0, popularityIndex: 0 };
+    }
+
+    const averageReadMins = Math.round(
+      analyticsStories.reduce((sum, story) => sum + estimateReadMinutes(story.excerpt || story.content || ''), 0) / totalStories
+    );
+
+    const uniqueTags = new Set(analyticsStories.flatMap(story => story.tags || []));
+    const topicDensity = Number((uniqueTags.size / totalStories).toFixed(1));
+
+    const featuredRatio = analyticsStories.filter(story => story.featured).length / totalStories;
+    const popularityIndex = Math.min(99, Math.round(58 + featuredRatio * 36 + topicDensity * 2));
+
+    return {
+      averageReadMins,
+      topicDensity,
+      popularityIndex,
+    };
+  })();
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem('ink:last-read');
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved) as ReadingSnapshot;
+      if (parsed?.title && parsed?.externalUrl) {
+        setLastRead(parsed);
+      }
+    } catch {
+      // Ignore corrupted local storage payloads.
+    }
+  }, []);
+
+  const rememberReading = (article: Article) => {
+    const snapshot: ReadingSnapshot = {
+      title: article.title,
+      tags: article.tags || [],
+      author: article.author,
+      date: article.date,
+      excerpt: article.excerpt,
+      imageUrl: article.imageUrl,
+      externalUrl: article.externalUrl,
+    };
+
+    setLastRead(snapshot);
+    window.localStorage.setItem('ink:last-read', JSON.stringify(snapshot));
+  };
+
+  const smartRecommendations: Article[] = (() => {
+    const universe = [...galleryData, ...featuredData, ...latestData];
+    const deduped = Array.from(new Map(universe.map(item => [item.externalUrl || item.title, item])).values());
+
+    if (!lastRead) {
+      return deduped.slice(0, 4);
+    }
+
+    return deduped
+      .filter(item => item.externalUrl !== lastRead.externalUrl)
+      .sort((a, b) => {
+        const scoreA = getTagAffinityScore(lastRead.tags, a.tags || [], a.featured);
+        const scoreB = getTagAffinityScore(lastRead.tags, b.tags || [], b.featured);
+        return scoreB - scoreA;
+      })
+      .slice(0, 4);
+  })();
+
   // ── Category Data ──────────────────────────────────────────────────────────
   const storiesForCategory = useFallback 
     ? staticArticles.map(a => ({ tags: a.tags || [] }))
@@ -180,9 +334,15 @@ const HomePage: React.FC = () => {
           <>
             <img
               src={heroData.imageUrl}
+              srcSet={getMediumSrcSet(heroData.imageUrl)}
+              sizes="100vw"
               alt={heroData.title}
               className="absolute inset-0 w-full h-full object-cover"
               loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              width={1600}
+              height={900}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
             <div className="absolute left-0 inset-y-0 w-1 bg-ink-accent opacity-80" />
@@ -233,7 +393,7 @@ const HomePage: React.FC = () => {
                   href={heroData.externalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-ink-accent hover:bg-opacity-90 active:scale-95 text-white font-semibold px-6 py-3 rounded-full transition-all duration-300 shadow-lg hover:shadow-ink-accent/40 text-sm w-fit"
+                  className="interactive-cta inline-flex items-center gap-2 bg-ink-accent hover:bg-opacity-90 active:scale-95 text-white font-semibold px-6 py-3 rounded-full transition-all duration-300 shadow-lg hover:shadow-ink-accent/40 text-sm w-fit"
                 >
                   Read on Medium
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -263,9 +423,28 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
+      {/* ── LIVE READING ANALYTICS ─────────────────────────────────────── */}
+      <section className="container mx-auto px-6 pt-12">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="interactive-lift rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/70 px-5 py-4">
+            <p className="text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400">Avg. Read Time</p>
+            <p className="mt-1 text-2xl font-serif font-bold text-slate-800 dark:text-slate-100">{readingInsights.averageReadMins} min</p>
+          </div>
+          <div className="interactive-lift rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/70 px-5 py-4">
+            <p className="text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400">Topic Density</p>
+            <p className="mt-1 text-2xl font-serif font-bold text-slate-800 dark:text-slate-100">{readingInsights.topicDensity}</p>
+          </div>
+          <div className="interactive-lift rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/70 px-5 py-4">
+            <p className="text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400">Popularity Index</p>
+            <p className="mt-1 text-2xl font-serif font-bold text-slate-800 dark:text-slate-100">{readingInsights.popularityIndex}</p>
+          </div>
+        </div>
+      </section>
+
       {/* ── EXPLORE BY CATEGORY ──────────────────────────────────────────── */}
       <section className="container mx-auto px-6 py-20">
         <div className="text-center mb-12">
+                  onClick={() => rememberReading(heroData)}
           <p className="text-ink-accent text-sm font-semibold uppercase tracking-widest mb-2">
             Browse By Topic
           </p>
@@ -339,6 +518,7 @@ const HomePage: React.FC = () => {
               href={topData.externalUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => rememberReading(topData)}
               className="group flex flex-col md:flex-row gap-8 items-start"
             >
               <div className="flex-shrink-0 w-full md:w-72 h-52 rounded-xl overflow-hidden shadow-md">
@@ -411,13 +591,13 @@ const HomePage: React.FC = () => {
                 </div>
               ))
             : featuredData.map((article, idx) => (
-                <div
+                <RevealOnScroll
                   key={article.id}
-                  className="opacity-0 animate-fadeInUp"
-                  style={{ animationDelay: `${idx * 150}ms` }}
+                  delay={idx * 150}
+                  threshold={0.18}
                 >
                   <ArticleCard article={article} />
-                </div>
+                </RevealOnScroll>
               ))}
         </div>
       </section>
@@ -449,13 +629,19 @@ const HomePage: React.FC = () => {
                   href={article.externalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => rememberReading(article)}
                   className="relative flex-shrink-0 w-80 h-96 mx-3 rounded-2xl overflow-hidden shadow-lg group/card"
                 >
                   <img
                     src={article.imageUrl}
+                    srcSet={getMediumSrcSet(article.imageUrl)}
+                    sizes="(max-width: 640px) 80vw, 320px"
                     alt={article.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
                     loading="lazy"
+                    decoding="async"
+                    width={1280}
+                    height={1536}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
@@ -512,37 +698,110 @@ const HomePage: React.FC = () => {
           {loading
             ? [0, 1, 2, 3].map(i => <SkeletonCard key={i} />)
             : latestData.map((article, idx) => (
-                <a
+                <RevealOnScroll
                   key={article.id}
-                  href={article.externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block opacity-0 animate-fadeInUp"
-                  style={{ animationDelay: `${idx * 100}ms` }}
+                  delay={idx * 100}
+                  threshold={0.15}
                 >
-                  <div className="overflow-hidden rounded-xl mb-4 shadow-sm aspect-video">
-                    <img
-                      src={article.imageUrl}
-                      alt={article.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  </div>
+                  <a
+                    href={article.externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => rememberReading(article)}
+                    className="group block"
+                  >
+                    <div className="overflow-hidden rounded-xl mb-4 shadow-sm aspect-video">
+                      <img
+                        src={article.imageUrl}
+                        srcSet={getMediumSrcSet(article.imageUrl)}
+                        sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, 24vw"
+                        alt={article.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        decoding="async"
+                        width={1200}
+                        height={675}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {article.tags.slice(0, 2).map(t => (
+                        <span key={t} className="text-xs text-ink-accent font-medium bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                    <h3 className="font-serif text-lg font-bold text-slate-800 dark:text-slate-100 leading-snug mb-1 group-hover:text-ink-accent transition-colors line-clamp-2">
+                      {article.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      By <span className="font-medium">{article.author}</span> · {article.date}
+                    </p>
+                  </a>
+                </RevealOnScroll>
+              ))}
+        </div>
+      </section>
+
+      {/* ── CONTINUE READING + SMART PICKS ─────────────────────────────── */}
+      <section className="container mx-auto px-6 pb-10">
+        <div className="rounded-3xl border border-slate-200/70 dark:border-slate-700/60 bg-gradient-to-br from-white to-amber-50 dark:from-slate-900 dark:to-slate-800/80 p-6 md:p-8">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+            <div>
+              <p className="text-ink-accent text-xs font-semibold uppercase tracking-widest mb-1">Personalized</p>
+              <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-800 dark:text-slate-100">Continue Reading</h2>
+              <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">
+                {lastRead
+                  ? `Based on your recent read: “${lastRead.title}”`
+                  : 'Start reading any story and we will tune recommendations by tag affinity.'}
+              </p>
+            </div>
+            <Link to="/medium" className="interactive-cta inline-flex items-center gap-2 text-sm font-semibold text-ink-accent">
+              Open full discovery feed
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {smartRecommendations.map((article) => (
+              <a
+                key={`${article.id}-${article.title}`}
+                href={article.externalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => rememberReading(article)}
+                className="interactive-lift group rounded-2xl bg-white/90 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-700/60 overflow-hidden"
+              >
+                <div className="aspect-video overflow-hidden">
+                  <img
+                    src={article.imageUrl}
+                    srcSet={getMediumSrcSet(article.imageUrl)}
+                    sizes="(max-width: 640px) 92vw, (max-width: 1024px) 48vw, 23vw"
+                    alt={article.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                    decoding="async"
+                    width={1200}
+                    height={675}
+                  />
+                </div>
+                <div className="p-4">
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {article.tags.slice(0, 2).map(t => (
-                      <span key={t} className="text-xs text-ink-accent font-medium bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
-                        {t}
+                    {article.tags.slice(0, 2).map(tag => (
+                      <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100/70 dark:bg-amber-900/20 text-ink-accent font-semibold">
+                        {tag}
                       </span>
                     ))}
                   </div>
-                  <h3 className="font-serif text-lg font-bold text-slate-800 dark:text-slate-100 leading-snug mb-1 group-hover:text-ink-accent transition-colors line-clamp-2">
+                  <h3 className="font-serif text-base font-bold text-slate-800 dark:text-slate-100 line-clamp-2 mb-1 group-hover:text-ink-accent transition-colors">
                     {article.title}
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    By <span className="font-medium">{article.author}</span> · {article.date}
-                  </p>
-                </a>
-              ))}
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{article.author} · {article.date}</p>
+                </div>
+              </a>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -558,6 +817,9 @@ const HomePage: React.FC = () => {
             href="https://medium.com/the-ink-home"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => {
+              if (heroData) rememberReading(heroData);
+            }}
             className="inline-flex items-center gap-2 bg-ink-accent hover:bg-opacity-90 active:scale-95 text-white font-semibold px-8 py-3.5 rounded-full transition-all duration-300 shadow-lg"
           >
             Follow on Medium

@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 type FormStatus = 'idle' | 'submitting' | 'success';
 
 const ContactPage: React.FC = () => {
     const [status, setStatus] = useState<FormStatus>('idle');
+
+    usePageMeta({
+        title: 'Contact',
+        description: 'Get in touch with The Ink Home for submissions, feedback, and collaborations.',
+        pathname: '/contact',
+    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,7 +40,7 @@ const ContactPage: React.FC = () => {
                         <div className="text-center py-12 animate-scaleIn">
                             <h3 className="text-2xl font-serif text-slate-800 dark:text-slate-100 mb-2">Thank you!</h3>
                             <p className="text-slate-600 dark:text-slate-300 mb-6">Your message has been sent successfully. We'll get back to you soon.</p>
-                            <button onClick={() => setStatus('idle')} className="bg-ink-accent text-white px-6 py-2 rounded-md hover:bg-opacity-90 transition">
+                            <button onClick={() => setStatus('idle')} className="interactive-cta bg-ink-accent text-white px-6 py-2 rounded-md hover:bg-opacity-90 transition">
                                 Send Another Message
                             </button>
                         </div>
@@ -59,7 +66,7 @@ const ContactPage: React.FC = () => {
                                     <button 
                                         type="submit" 
                                         disabled={status === 'submitting'}
-                                        className="w-full sm:w-auto bg-ink-accent text-white px-8 py-3 rounded-md hover:bg-opacity-90 transition font-semibold disabled:bg-opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
+                                        className="interactive-cta w-full sm:w-auto bg-ink-accent text-white px-8 py-3 rounded-md hover:bg-opacity-90 transition font-semibold disabled:bg-opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
                                     >
                                         {status === 'submitting' ? (
                                             <>

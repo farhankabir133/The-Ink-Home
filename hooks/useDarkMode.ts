@@ -1,35 +1,74 @@
-
 import { useState, useEffect } from 'react';
 
-type Theme = 'light' | 'dark';
+export type ThemePreference = 'auto' | 'light' | 'dark' | 'ink';
+export type ResolvedTheme = 'light' | 'dark' | 'ink';
 
-export const useDarkMode = (): [Theme, () => void] => {
-  const [theme, setTheme] = useState<Theme>('light');
+interface ThemeHookResult {
+  themePreference: ThemePreference;
+  resolvedTheme: ResolvedTheme;
+  cycleTheme: () => void;
+  setThemePreference: (value: ThemePreference) => void;
+}
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    window.localStorage.setItem('theme', newTheme);
+const THEME_KEY = 'theme-preference';
+const ORDER: ThemePreference[] = ['auto', 'light', 'dark', 'ink'];
+
+function resolveTheme(preference: ThemePreference, systemPrefersDark: boolean): ResolvedTheme {
+  if (preference === 'auto') return systemPrefersDark ? 'dark' : 'light';
+  return preference;
+}
+
+export const useDarkMode = (): ThemeHookResult => {
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>('auto');
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
+
+  const setThemePreference = (value: ThemePreference) => {
+    setThemePreferenceState(value);
+    window.localStorage.setItem(THEME_KEY, value);
+  };
+
+  const cycleTheme = () => {
+    const currentIndex = ORDER.indexOf(themePreference);
+    const next = ORDER[(currentIndex + 1) % ORDER.length];
+    setThemePreference(next);
   };
 
   useEffect(() => {
-    const localTheme = window.localStorage.getItem('theme') as Theme | null;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (localTheme) {
-      setTheme(localTheme);
-    } else if (prefersDark) {
-      setTheme('dark');
-    } else {
-      setTheme('light');
+    const localTheme = window.localStorage.getItem(THEME_KEY) as ThemePreference | null;
+    if (localTheme && ORDER.includes(localTheme)) {
+      setThemePreferenceState(localTheme);
     }
   }, []);
-  
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyResolved = () => {
+      setResolvedTheme(resolveTheme(themePreference, mediaQuery.matches));
+    };
+
+    applyResolved();
+    mediaQuery.addEventListener('change', applyResolved);
+    return () => mediaQuery.removeEventListener('change', applyResolved);
+  }, [themePreference]);
+
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove(theme === 'light' ? 'dark' : 'light');
-    root.classList.add(theme);
-  }, [theme]);
+    const body = window.document.body;
 
-  return [theme, toggleTheme];
+    root.classList.remove('dark');
+    if (resolvedTheme === 'dark') {
+      root.classList.add('dark');
+    }
+
+    body.classList.toggle('book-mode', resolvedTheme === 'ink');
+
+    root.classList.add('theme-transition');
+    const timeout = window.setTimeout(() => {
+      root.classList.remove('theme-transition');
+    }, 260);
+
+    return () => window.clearTimeout(timeout);
+  }, [resolvedTheme]);
+
+  return { themePreference, resolvedTheme, cycleTheme, setThemePreference };
 };
