@@ -18,6 +18,26 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        middlewares: [
+          // Serve external hero-frames directory
+          (req, res, next) => {
+            if (req.url.startsWith('/hero-frames/')) {
+              const fs = require('fs');
+              const filePath = path.join(
+                '/Users/farhankabir/Downloads/ezgif-35daabe8a48f3b86-jpg/public',
+                req.url
+              );
+              try {
+                const content = fs.readFileSync(filePath);
+                res.end(content);
+              } catch (e) {
+                next();
+              }
+            } else {
+              next();
+            }
+          }
+        ]
       },
       plugins: [react()],
       resolve: {

@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Frame files (too large for repo) - only the actual frame images
+public/here-frames/*.jpg
+public/here-frames/*.png
+public/ezgif-frame-*.jpg
+

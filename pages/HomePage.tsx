@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ArticleCard from '../components/ArticleCard';
 import { useMediumFeed, MediumStory } from '../hooks/useMediumFeed';
@@ -84,6 +84,10 @@ function getTagAffinityScore(baseTags: string[], candidateTags: string[], featur
 
   return overlaps * 4 + (featured ? 1 : 0);
 }
+
+const FRAME_SEQUENCE_TOTAL = 152;
+const HERE_FRAME_SEQUENCE_TOTAL = 240;
+const FRAME_SEQUENCE_FPS = 24;
 
 const RevealOnScroll: React.FC<RevealOnScrollProps> = ({
   children,
@@ -190,8 +194,267 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ categoryData, count, idx, o
 const HomePage: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [lastRead, setLastRead] = useState<ReadingSnapshot | null>(null);
+  const [framesReady, setFramesReady] = useState(false);
+  const [hereFramesReady, setHereFramesReady] = useState(false);
+  const frameHeroSectionRef = useRef<HTMLElement>(null);
+  const frameCanvasRef = useRef<HTMLCanvasElement>(null);
+  const preloadedFramesRef = useRef<HTMLImageElement[]>([]);
+  const hereHeroSectionRef = useRef<HTMLElement>(null);
+  const hereCanvasRef = useRef<HTMLCanvasElement>(null);
+  const herePreloadedFramesRef = useRef<HTMLImageElement[]>([]);
   const navigate = useNavigate();
   useEffect(() => setMounted(true), []);
+
+  const frameSequence = useMemo(
+    () => {
+      // Allow overriding the hero frames base path via Vite env var
+      // Set VITE_HERO_FRAMES_BASE to an absolute path served by the dev server
+      // (for example '/hero-frames/' after copying the files into public/hero-frames).
+      const heroFramesBase = (import.meta.env as any).VITE_HERO_FRAMES_BASE ?? `${import.meta.env.BASE_URL}hero-frames/`;
+      // Use VITE_HERO_FRAMES_VERSION env var to cache-bust frames. This forces browser to re-fetch when version changes.
+      const frameBustVersion = (import.meta.env as any).VITE_HERO_FRAMES_VERSION ?? '';
+      const cacheBuster = frameBustVersion ? `?v=${frameBustVersion}` : '';
+
+      return Array.from({ length: FRAME_SEQUENCE_TOTAL }, (_, index) => {
+        const frameNumber = String(index + 1).padStart(3, '0');
+        return `${heroFramesBase}ezgif-frame-${frameNumber}.jpg${cacheBuster}`;
+      });
+    },
+    [(import.meta.env as any).VITE_HERO_FRAMES_BASE, (import.meta.env as any).VITE_HERO_FRAMES_VERSION],
+  );
+
+  const hereFrameSequence = useMemo(
+    () => {
+      // Here frames sequence from public/here-frames directory
+      const hereFramesBase = `${import.meta.env.BASE_URL}here-frames/`;
+      const frameBustVersion = (import.meta.env as any).VITE_HERO_FRAMES_VERSION ?? '';
+      const cacheBuster = frameBustVersion ? `?v=${frameBustVersion}` : '';
+
+      return Array.from({ length: HERE_FRAME_SEQUENCE_TOTAL }, (_, index) => {
+        const frameNumber = String(index + 1).padStart(3, '0');
+        return `${hereFramesBase}frame-${frameNumber}.jpg${cacheBuster}`;
+      });
+    },
+    [(import.meta.env as any).VITE_HERO_FRAMES_VERSION],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function preloadAllFrames() {
+      const preloadPromises = frameSequence.map(
+        frameSrc =>
+          new Promise<HTMLImageElement | null>(resolve => {
+            const img = new Image();
+            img.src = frameSrc;
+            img.decoding = 'async';
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+          }),
+      );
+
+      const loadedFrames = await Promise.all(preloadPromises);
+      preloadedFramesRef.current = loadedFrames.filter((img): img is HTMLImageElement => Boolean(img));
+
+      if (!cancelled) {
+        setFramesReady(preloadedFramesRef.current.length > 0);
+      }
+    }
+
+    preloadAllFrames();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [frameSequence.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function preloadHereFrames() {
+      const preloadPromises = hereFrameSequence.map(
+        frameSrc =>
+          new Promise<HTMLImageElement | null>(resolve => {
+            const img = new Image();
+            img.src = frameSrc;
+            img.decoding = 'async';
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+          }),
+      );
+
+      const loadedFrames = await Promise.all(preloadPromises);
+      herePreloadedFramesRef.current = loadedFrames.filter((img): img is HTMLImageElement => Boolean(img));
+
+      if (!cancelled) {
+        setHereFramesReady(herePreloadedFramesRef.current.length > 0);
+      }
+    }
+
+    preloadHereFrames();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hereFrameSequence.length]);
+
+  useEffect(() => {
+    if (!framesReady) {
+      return;
+    }
+
+  const canvas = frameCanvasRef.current;
+  const stage = frameHeroSectionRef.current;
+    const frames = preloadedFramesRef.current;
+    if (!canvas || !stage || frames.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let rafId = 0;
+    let lastTime = 0;
+    let frameIndex = 0;
+
+    const drawFrame = (img: HTMLImageElement) => {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const rect = stage.getBoundingClientRect();
+      const nextWidth = Math.max(1, Math.round(rect.width * dpr));
+      const nextHeight = Math.max(1, Math.round(rect.height * dpr));
+
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+        canvas.style.width = `${Math.round(rect.width)}px`;
+        canvas.style.height = `${Math.round(rect.height)}px`;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const scale = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
+      const drawWidth = img.naturalWidth * scale;
+      const drawHeight = img.naturalHeight * scale;
+      const drawX = (canvas.width - drawWidth) / 2;
+      const drawY = (canvas.height - drawHeight) / 2;
+
+      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+    };
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      drawFrame(frames[0]);
+      return;
+    }
+
+    const frameDuration = 1000 / FRAME_SEQUENCE_FPS;
+
+    const animate = (timestamp: number) => {
+      if (!lastTime) lastTime = timestamp;
+      const elapsed = timestamp - lastTime;
+
+      if (elapsed >= frameDuration) {
+        frameIndex = (frameIndex + 1) % frames.length;
+        drawFrame(frames[frameIndex]);
+        lastTime = timestamp - (elapsed % frameDuration);
+      }
+
+      rafId = window.requestAnimationFrame(animate);
+    };
+
+    const handleResize = () => {
+      drawFrame(frames[frameIndex]);
+    };
+
+    drawFrame(frames[0]);
+    window.addEventListener('resize', handleResize);
+
+    rafId = window.requestAnimationFrame(animate);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [framesReady]);
+
+  useEffect(() => {
+    if (!hereFramesReady) {
+      return;
+    }
+
+    const canvas = hereCanvasRef.current;
+    const stage = hereHeroSectionRef.current;
+    const frames = herePreloadedFramesRef.current;
+    if (!canvas || !stage || frames.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let rafId = 0;
+    let lastTime = 0;
+    let frameIndex = 0;
+
+    const drawFrame = (img: HTMLImageElement) => {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const rect = stage.getBoundingClientRect();
+      const nextWidth = Math.max(1, Math.round(rect.width * dpr));
+      const nextHeight = Math.max(1, Math.round(rect.height * dpr));
+
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+        canvas.style.width = `${Math.round(rect.width)}px`;
+        canvas.style.height = `${Math.round(rect.height)}px`;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const scale = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
+      const drawWidth = img.naturalWidth * scale;
+      const drawHeight = img.naturalHeight * scale;
+      const drawX = (canvas.width - drawWidth) / 2;
+      const drawY = (canvas.height - drawHeight) / 2;
+
+      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+    };
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      drawFrame(frames[0]);
+      return;
+    }
+
+    const frameDuration = 1000 / FRAME_SEQUENCE_FPS;
+
+    const animate = (timestamp: number) => {
+      if (!lastTime) lastTime = timestamp;
+      const elapsed = timestamp - lastTime;
+
+      if (elapsed >= frameDuration) {
+        frameIndex = (frameIndex + 1) % frames.length;
+        drawFrame(frames[frameIndex]);
+        lastTime = timestamp - (elapsed % frameDuration);
+      }
+
+      rafId = window.requestAnimationFrame(animate);
+    };
+
+    const handleResize = () => {
+      drawFrame(frames[frameIndex]);
+    };
+
+    drawFrame(frames[0]);
+    window.addEventListener('resize', handleResize);
+
+    rafId = window.requestAnimationFrame(animate);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [hereFramesReady]);
 
   usePageMeta({
     title: 'Home',
@@ -324,98 +587,6 @@ const HomePage: React.FC = () => {
   return (
     <div className={`${mounted ? 'opacity-100 animate-fadeInUp' : 'opacity-0'}`}>
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative h-[88vh] min-h-[560px] flex items-end justify-start overflow-hidden">
-
-        {loading ? (
-          /* Skeleton hero */
-          <div className="absolute inset-0 bg-slate-300 dark:bg-slate-800 animate-pulse" />
-        ) : heroData ? (
-          <>
-            <img
-              src={heroData.imageUrl}
-              srcSet={getMediumSrcSet(heroData.imageUrl)}
-              sizes="100vw"
-              alt={heroData.title}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-              width={1600}
-              height={900}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-            <div className="absolute left-0 inset-y-0 w-1 bg-ink-accent opacity-80" />
-          </>
-        ) : null}
-
-        <div className="relative z-10 w-full max-w-5xl mx-auto px-6 md:px-12 pb-16">
-          {loading ? (
-            /* Skeleton text */
-            <div className="space-y-4 animate-pulse max-w-2xl">
-              <div className="h-4 bg-white/20 rounded w-40" />
-              <div className="h-10 bg-white/20 rounded w-full" />
-              <div className="h-10 bg-white/20 rounded w-3/4" />
-              <div className="h-5 bg-white/20 rounded w-2/3" />
-              <div className="h-10 bg-white/20 rounded-full w-44 mt-4" />
-            </div>
-          ) : heroData ? (
-            <>
-              <div className="flex items-center gap-3 mb-5">
-                <span className="flex items-center gap-1.5 bg-ink-accent text-white text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                  Latest Story
-                </span>
-                <span className="text-slate-300 text-sm">From The Ink Home on Medium</span>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-4">
-                {heroData.tags.slice(0, 3).map(t => <Tag key={t} label={t} />)}
-              </div>
-
-              <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight mb-5 max-w-3xl">
-                {heroData.title}
-              </h1>
-
-              <p className="text-lg text-slate-200 max-w-2xl mb-6 leading-relaxed">
-                {heroData.excerpt}
-              </p>
-
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="text-slate-300 text-sm">
-                  By <span className="text-white font-semibold">{heroData.author}</span>
-                  <span className="mx-2 opacity-40">·</span>
-                  {heroData.date}
-                </div>
-                <a
-                  href={heroData.externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="interactive-cta inline-flex items-center gap-2 bg-ink-accent hover:bg-opacity-90 active:scale-95 text-white font-semibold px-6 py-3 rounded-full transition-all duration-300 shadow-lg hover:shadow-ink-accent/40 text-sm w-fit"
-                >
-                  Read on Medium
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </a>
-              </div>
-            </>
-          ) : null}
-        </div>
-
-        {/* Scroll hint */}
-        {!loading && (
-          <div className="absolute bottom-6 right-8 flex flex-col items-center gap-1 text-white/40 text-xs animate-bounce">
-            <span>scroll</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        )}
-      </section>
-
       {/* ── ERROR BANNER ─────────────────────────────────────────────────── */}
       {error && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 px-6 py-3 text-center text-sm text-amber-700 dark:text-amber-400">
@@ -423,8 +594,113 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
+      {/* ── NEW HERE HERO SECTION ────────────────────────────────────────── */}
+      <section
+        ref={hereHeroSectionRef}
+        className="relative h-screen min-h-screen overflow-hidden bg-slate-950 dark:bg-slate-950 group"
+      >
+        {/* Animated canvas background */}
+        <canvas
+          ref={hereCanvasRef}
+          className="absolute inset-0 h-full w-full transition-opacity duration-300 group-hover:opacity-95"
+          aria-hidden="true"
+        />
+        
+        {/* Premium gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20" />
+        
+        {/* Animated accent light beam */}
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-ink-accent/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-pulse" />
+        <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-pulse" />
+
+        {/* Content wrapper */}
+        <div className="relative z-20 h-full flex flex-col justify-between p-6 md:p-10 lg:p-12">
+          
+          {/* Top accent bar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-8 bg-gradient-to-b from-ink-accent to-transparent rounded-full" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Premium Content</span>
+            </div>
+            <div className="hidden md:flex items-center gap-2 text-white/40 text-xs">
+              <span className="w-2 h-2 rounded-full bg-ink-accent animate-pulse" />
+              <span>Playing {hereFramesReady ? '240 frames' : 'loading...'}</span>
+            </div>
+          </div>
+
+          {/* Main content */}
+          <div className="max-w-3xl">
+            {/* Label with animation */}
+            <div className="mb-4 inline-block">
+              <p className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-ink-accent/20 to-purple-500/20 border border-ink-accent/40 backdrop-blur-md px-4 py-2 text-[12px] font-bold uppercase tracking-widest text-ink-accent hover:from-ink-accent/30 hover:to-purple-500/30 hover:border-ink-accent/60 transition-all duration-300 cursor-default">
+                <span className="w-2 h-2 rounded-full bg-ink-accent animate-pulse" />
+                Visual Journey
+              </p>
+            </div>
+
+            {/* Main heading with enhanced typography */}
+            <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-white mb-4 md:mb-6 max-w-2xl">
+              <span className="bg-gradient-to-r from-white via-ink-accent to-purple-200 bg-clip-text text-transparent">
+                Stories in Motion
+              </span>
+              <span className="block text-white mt-2">Crafted with Care</span>
+            </h1>
+
+            {/* Descriptive text */}
+            <p className="text-base md:text-lg text-slate-200 max-w-xl mb-6 md:mb-8 leading-relaxed">
+              Experience a handcrafted visual introduction to our most compelling stories. Every frame designed to inspire, engage, and captivate your imagination.
+            </p>
+
+            {/* Loading state and CTA */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              {!hereFramesReady ? (
+                <div className="flex items-center gap-2 text-ink-accent">
+                  <div className="w-3 h-3 rounded-full bg-ink-accent animate-pulse" />
+                  <span className="text-sm font-medium uppercase tracking-wider">Loading visual experience…</span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigate('/medium')}
+                    className="group/btn inline-flex items-center gap-2 bg-gradient-to-r from-ink-accent to-purple-600 hover:from-ink-accent/90 hover:to-purple-500 text-white font-bold px-8 py-4 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-ink-accent/40 active:scale-95 text-sm uppercase tracking-widest"
+                  >
+                    Explore Stories
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover/btn:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const element = document.querySelector('[data-scroll-target="analytics"]');
+                      element?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="inline-flex items-center gap-2 border-2 border-white/30 hover:border-ink-accent text-white hover:text-ink-accent font-bold px-8 py-4 rounded-xl transition-all duration-300 text-sm uppercase tracking-widest"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                    Learn More
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom scroll indicator */}
+          <div className="flex justify-center animate-bounce">
+            <div className="flex flex-col items-center gap-2 text-white/40 hover:text-white/60 transition-colors cursor-pointer">
+              <span className="text-xs font-medium uppercase tracking-widest">Scroll to discover</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── LIVE READING ANALYTICS ─────────────────────────────────────── */}
-      <section className="container mx-auto px-6 pt-12">
+      <section className="container mx-auto px-6 pt-12" data-scroll-target="analytics">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="interactive-lift rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/70 px-5 py-4">
             <p className="text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400">Avg. Read Time</p>

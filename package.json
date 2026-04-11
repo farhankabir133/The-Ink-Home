@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "test": "node scripts/smoke-test.mjs",
     "update:medium-cache": "node scripts/update-medium-cache.mjs",
+    "install:hero-frames": "node scripts/copy-hero-frames.mjs",
+    "install:here-frames": "node scripts/copy-here-frames.mjs",
     "check:performance-budgets": "node scripts/check-performance-budgets.mjs",
     "ci:verify": "npm run build && npm run check:performance-budgets && npx tsc --noEmit"
   },
